@@ -16,6 +16,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
         PopupMode::Rules     => " RULES ",
         PopupMode::Session   => " SESSION ",
         PopupMode::Skills    => " SKILLS ",
+        PopupMode::Module    => " MODULES ",
         PopupMode::Commands  => " COMMANDS ",
         _                    => " SELECT ",
     };

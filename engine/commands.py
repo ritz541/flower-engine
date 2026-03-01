@@ -39,7 +39,7 @@ async def handle_command(cmd_str: str, websocket: WebSocket):
     elif cmd == "/rules":
         if len(parts) >= 3 and parts[1] == "add":
             rule_id = parts[2].strip()
-            if os.path.exists(f"rules/{rule_id}.yaml"):
+            if os.path.exists(f"assets/rules/{rule_id}.yaml"):
                 if rule_id not in state.ACTIVE_RULES: state.ACTIVE_RULES.append(rule_id)
                 await websocket.send_text(build_ws_payload("system_update", f"✓ Rule '{rule_id}' activated", {"active_rules": state.ACTIVE_RULES}))
                 await broadcast_sync_state(websocket)
@@ -51,13 +51,25 @@ async def handle_command(cmd_str: str, websocket: WebSocket):
     elif cmd == "/skills":
         if len(parts) >= 3 and parts[1] == "add":
             skill_id = parts[2].strip()
-            if os.path.exists(f"skills/{skill_id}.yaml"):
+            if os.path.exists(f"assets/skills/{skill_id}.yaml"):
                 if skill_id not in state.ACTIVE_SKILLS: state.ACTIVE_SKILLS.append(skill_id)
                 await websocket.send_text(build_ws_payload("system_update", f"✓ Skill '{skill_id}' acquired", {"active_skills": state.ACTIVE_SKILLS}))
                 await broadcast_sync_state(websocket)
         elif len(parts) >= 2 and parts[1] == "clear":
             state.ACTIVE_SKILLS.clear()
             await websocket.send_text(build_ws_payload("system_update", "✓ All skills cleared", {"active_skills": state.ACTIVE_SKILLS}))
+            await broadcast_sync_state(websocket)
+
+    elif cmd == "/module":
+        if len(parts) >= 3 and parts[1] == "add":
+            mod_id = parts[2].strip()
+            if os.path.exists(f"assets/modules/{mod_id}.yaml"):
+                if mod_id not in state.ACTIVE_MODULES: state.ACTIVE_MODULES.append(mod_id)
+                await websocket.send_text(build_ws_payload("system_update", f"✓ Module '{mod_id}' plugged in", {"active_modules": state.ACTIVE_MODULES}))
+                await broadcast_sync_state(websocket)
+        elif len(parts) >= 2 and parts[1] == "clear":
+            state.ACTIVE_MODULES.clear()
+            await websocket.send_text(build_ws_payload("system_update", "✓ All modules unplugged", {"active_modules": state.ACTIVE_MODULES}))
             await broadcast_sync_state(websocket)
 
     elif cmd == "/session":

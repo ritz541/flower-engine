@@ -18,24 +18,20 @@ app = FastAPI(title="The Flower Engine")
 @app.on_event("startup")
 async def startup():
     # Load Assets
-    for data in load_yaml_assets("worlds/*.yaml"):
-        w = World(
-            id=data["id"], 
-            name=data["name"], 
-            lore=data.get("lore", ""),
-            start_message=data.get("start_message", "")
-        )
+    for data in load_yaml_assets("assets/worlds/*.yaml"):
+        w = World(id=data["id"], name=data["name"], lore=data.get("lore", ""), start_message=data.get("start_message", ""))
         world_manager.add_world(w)
         state.available_worlds.append({"id": w.id, "name": w.name})
         if w.lore: rag_manager.add_lore(w.id, "base_lore", w.lore)
 
-    for data in load_yaml_assets("characters/*.yaml"):
+    for data in load_yaml_assets("assets/characters/*.yaml"):
         c = Character(id=data["id"], name=data["name"], persona=data.get("persona", ""))
         char_manager.add_character(c)
         state.available_characters.append({"id": c.id, "name": c.name})
 
-    state.available_rules = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("rules/*.yaml")]
-    state.available_skills = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("skills/*.yaml")]
+    state.available_rules = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("assets/rules/*.yaml")]
+    state.available_skills = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("assets/skills/*.yaml")]
+    state.available_modules = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("assets/modules/*.yaml")]
 
     # Fetch Models
     log.info("Fetching models...")

@@ -35,8 +35,8 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
     add_item("World", world_done, "/world select", &app.world_id);
     add_item("Character", char_done, "/character select", &app.character_id);
     add_item("AI Model", app.model_confirmed, "/model", &app.active_model);
+    add_item("Modules (Opt)", !app.active_modules.is_empty(), "/module add", "Optional");
     add_item("Session", !app.session_id.is_empty(), "/session new", &app.session_id);
-
     if !app.session_id.is_empty() {
         checklist.push(Line::from(""));
         checklist.push(Line::from(Span::styled("  ✦ The stage is set. Send a message to begin.", Style::default().fg(COLOR_AI).add_modifier(Modifier::ITALIC))));

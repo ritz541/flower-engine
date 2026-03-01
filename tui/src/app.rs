@@ -24,6 +24,7 @@ pub enum PopupMode {
     Rules,
     Session,
     Skills,
+    Module,
     Commands,
     None,
 }
@@ -67,8 +68,10 @@ pub struct App {
     pub available_sessions: Vec<EntityInfo>,
     pub available_commands: Vec<EntityInfo>,
     pub available_skills: Vec<EntityInfo>,
+    pub available_modules: Vec<EntityInfo>,
     pub active_rules: Vec<String>,
     pub active_skills: Vec<String>,
+    pub active_modules: Vec<String>,
     pub command_hint: String,
 }
 
@@ -124,11 +127,15 @@ impl App {
                 EntityInfo { id: "/rules clear".to_string(), name: "Clear all active rules".to_string(), prompt_price: 0.0, completion_price: 0.0 },
                 EntityInfo { id: "/skills add ".to_string(), name: "Acquire a new ability".to_string(), prompt_price: 0.0, completion_price: 0.0 },
                 EntityInfo { id: "/skills clear".to_string(), name: "Forget all skills".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/module add ".to_string(), name: "Plug in a world mechanic".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/module clear".to_string(), name: "Unplug all mechanics".to_string(), prompt_price: 0.0, completion_price: 0.0 },
                 EntityInfo { id: "/quit".to_string(), name: "Exit the engine".to_string(), prompt_price: 0.0, completion_price: 0.0 },
             ],
             available_skills: Vec::new(),
+            available_modules: Vec::new(),
             active_rules: Vec::new(),
             active_skills: Vec::new(),
+            active_modules: Vec::new(),
             command_hint: String::new(),
         }
     }
@@ -264,6 +271,7 @@ impl App {
             PopupMode::Rules     => &self.available_rules,
             PopupMode::Session   => &self.available_sessions,
             PopupMode::Skills    => &self.available_skills,
+            PopupMode::Module    => &self.available_modules,
             PopupMode::Commands  => &self.available_commands,
             _                    => return Vec::new(),
         };

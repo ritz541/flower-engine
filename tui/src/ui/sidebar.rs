@@ -33,6 +33,19 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
 
     sidebar_lines.extend([
         Line::from(""),
+        Line::from(Span::styled(" MODULES", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
+    ]);
+
+    if app.active_modules.is_empty() {
+        sidebar_lines.push(Line::from(Span::styled("  (none)", Style::default().fg(Color::Indexed(234)))));
+    } else {
+        for mod_id in &app.active_modules {
+            sidebar_lines.push(Line::from(Span::styled(format!("  • {} ", mod_id), Style::default().fg(COLOR_AI))));
+        }
+    }
+
+    sidebar_lines.extend([
+        Line::from(""),
         Line::from(Span::styled(" ACTIVE RULES", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
     ]);
 

@@ -6,6 +6,7 @@ engine.log
 chroma_db/
 lore_notes/
 test_lore.txt
+assets/
 
 # Python
 __pycache__/

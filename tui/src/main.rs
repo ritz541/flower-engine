@@ -93,6 +93,8 @@ async fn run_app<B: ratatui::backend::Backend>(
                         if let Some(active) = msg.payload.metadata.active_rules { app.active_rules = active; }
                         if let Some(skills) = msg.payload.metadata.available_skills { app.available_skills = skills; }
                         if let Some(active_skills) = msg.payload.metadata.active_skills { app.active_skills = active_skills; }
+                        if let Some(modules) = msg.payload.metadata.available_modules { app.available_modules = modules; }
+                        if let Some(active_mods) = msg.payload.metadata.active_modules { app.active_modules = active_mods; }
                         if let Some(sess_id) = msg.payload.metadata.session_id {
                             app.session_id = sess_id;
                         }
@@ -118,6 +120,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                 app.active_completion_price = info.completion_price;
                             }
                         }
+                        if let Some(active_mods) = msg.payload.metadata.active_modules { app.active_modules = active_mods; }
                     }
                     "chat_chunk" => {
                         app.append_chunk(&msg.payload.content);
@@ -186,6 +189,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                                 else if cmd.contains("/model") { Some(app::PopupMode::Model) }
                                                 else if cmd.contains("/rules add") { Some(app::PopupMode::Rules) }
                                                 else if cmd.contains("/skills add") { Some(app::PopupMode::Skills) }
+                                                else if cmd.contains("/module add") { Some(app::PopupMode::Module) }
                                                 else if cmd.contains("/session continue") || cmd.contains("/session delete") { Some(app::PopupMode::Session) }
                                                 else { None };
 
@@ -206,6 +210,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                             app::PopupMode::Model     => "/model",
                                             app::PopupMode::Rules     => "/rules add",
                                             app::PopupMode::Skills    => "/skills add",
+                                            app::PopupMode::Module    => "/module add",
                                             app::PopupMode::Session   => {
                                                 if app.input.contains("delete") { "/session delete" }
                                                 else { "/session continue" }
@@ -238,6 +243,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                     else if app.input == "/model " && !app.available_models.is_empty() { Some(app::PopupMode::Model) }
                                     else if app.input == "/rules add " && !app.available_rules.is_empty() { Some(app::PopupMode::Rules) }
                                     else if app.input == "/skills add " && !app.available_skills.is_empty() { Some(app::PopupMode::Skills) }
+                                    else if app.input == "/module add " && !app.available_modules.is_empty() { Some(app::PopupMode::Module) }
                                     else if (app.input == "/session continue " || app.input == "/session delete ") && !app.available_sessions.is_empty() { Some(app::PopupMode::Session) }
                                     else { None };
 

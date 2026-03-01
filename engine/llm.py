@@ -46,7 +46,7 @@ async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_i
         loaded_texts = []
         for rule_id in state.ACTIVE_RULES:
             try:
-                with open(f"rules/{rule_id}.yaml", "r", encoding="utf-8") as f:
+                with open(f"assets/rules/{rule_id}.yaml", "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                     if data and "prompt" in data:
                         loaded_texts.append(data["prompt"].strip())
@@ -54,13 +54,28 @@ async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_i
         if loaded_texts:
             rules_block = "### UNIVERSAL LAWS ###\n" + "\n\n".join(loaded_texts)
 
+    # Build injected modules block
+    modules_block = ""
+    if state.ACTIVE_MODULES:
+        loaded_mods = []
+        for mod_id in state.ACTIVE_MODULES:
+            try:
+                with open(f"assets/modules/{mod_id}.yaml", "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f)
+                    if data and "prompt" in data:
+                        mod_name = data.get("name", mod_id)
+                        loaded_mods.append(f"- {mod_name}: {data['prompt'].strip()}")
+            except Exception: pass
+        if loaded_mods:
+            modules_block = "### WORLD MODULES ###\n" + "\n".join(loaded_mods)
+
     # Build injected skills block
     skills_block = ""
     if state.ACTIVE_SKILLS:
         loaded_skills = []
         for skill_id in state.ACTIVE_SKILLS:
             try:
-                with open(f"skills/{skill_id}.yaml", "r", encoding="utf-8") as f:
+                with open(f"assets/skills/{skill_id}.yaml", "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                     if data and "prompt" in data:
                         skill_name = data.get("name", skill_id)
@@ -70,6 +85,9 @@ async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_i
             skills_block = "### CHARACTER ABILITIES ###\n" + "\n".join(loaded_skills)
 
     system_prompt = build_system_prompt(char_name, char_persona, rules_block, skills_block, context)
+    # Inject modules right after rules if present
+    if modules_block:
+        system_prompt = system_prompt.replace("### THE PLAYER CHARACTER ###", f"{modules_block}\n\n### THE PLAYER CHARACTER ###")
     
     messages = [
         {"role": "system", "content": system_prompt},

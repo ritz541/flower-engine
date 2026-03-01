@@ -1,0 +1,3 @@
+id: "system_interface"
+name: "System HUD"
+prompt: "DISPLAY STATUS BLOCK AT THE START OF EVERY RESPONSE: [NAME] | [LVL] | [HP]"

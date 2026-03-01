@@ -39,6 +39,8 @@ pub struct Metadata {
     pub available_skills: Option<Vec<EntityInfo>>,
     pub active_rules: Option<Vec<String>>,
     pub active_skills: Option<Vec<String>>,
+    pub available_modules: Option<Vec<EntityInfo>>,
+    pub active_modules: Option<Vec<String>>,
     pub available_sessions: Option<Vec<EntityInfo>>,
     pub session_id: Option<String>,
     pub history: Option<Vec<HistoryMessage>>,
