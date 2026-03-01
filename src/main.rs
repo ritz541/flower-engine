@@ -22,7 +22,7 @@ const TICK_RATE: Duration = Duration::from_millis(150); // Spinner + cursor anim
 async fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -40,8 +40,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
+        LeaveAlternateScreen
     )?;
     terminal.show_cursor()?;
 
@@ -147,13 +146,6 @@ async fn run_app<B: ratatui::backend::Backend>(
             // --- Process Terminal Events ---
             Some(Ok(event)) = reader.next().fuse() => {
                 match event {
-                    Event::Mouse(mouse) => {
-                        match mouse.kind {
-                            MouseEventKind::ScrollUp => { app.scroll = app.scroll.saturating_sub(2); }
-                            MouseEventKind::ScrollDown => { app.scroll = app.scroll.saturating_add(2); }
-                            _ => {}
-                        }
-                    }
                     Event::Key(key) => {
                         match key.code {
                             KeyCode::Esc => {
