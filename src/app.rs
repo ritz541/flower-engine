@@ -1,10 +1,12 @@
+use std::time::Instant;
 use crate::models::EntityInfo;
 
 #[derive(Clone, PartialEq)]
 pub enum Role {
     Player,
-    Ai,
+    World,   // LLM narrator
     System,
+    Error,
 }
 
 #[derive(Clone)]
@@ -18,6 +20,7 @@ pub enum PopupMode {
     World,
     Character,
     Model,
+    Rules,
     None,
 }
 
@@ -31,12 +34,18 @@ pub struct App {
     pub is_typing: bool,
     pub scroll: u16,
     pub should_quit: bool,
-    
-    // Pro Iteration Fields
+
+    // Pro UI fields
     pub cursor_state: bool,
+    pub spinner_frame: usize,
     pub tps: f64,
     pub active_model: String,
-    
+
+    // Stats
+    pub message_count: usize,
+    pub total_tokens: u32,
+    pub session_start: Instant,
+
     // Popup State
     pub show_popup: bool,
     pub popup_mode: PopupMode,
@@ -45,6 +54,8 @@ pub struct App {
     pub available_worlds: Vec<EntityInfo>,
     pub available_characters: Vec<EntityInfo>,
     pub available_models: Vec<EntityInfo>,
+    pub available_rules: Vec<EntityInfo>,
+    pub active_rules: Vec<String>,
 }
 
 impl App {
@@ -59,11 +70,16 @@ impl App {
             is_typing: false,
             scroll: 0,
             should_quit: false,
-            
+
             cursor_state: true,
+            spinner_frame: 0,
             tps: 0.0,
             active_model: "Unknown".to_string(),
-            
+
+            message_count: 0,
+            total_tokens: 0,
+            session_start: Instant::now(),
+
             show_popup: false,
             popup_mode: PopupMode::None,
             selected_index: 0,
@@ -71,6 +87,8 @@ impl App {
             available_worlds: Vec::new(),
             available_characters: Vec::new(),
             available_models: Vec::new(),
+            available_rules: Vec::new(),
+            active_rules: Vec::new(),
         }
     }
 
@@ -91,55 +109,59 @@ impl App {
             return None;
         }
         let msg = self.input.clone();
-        
-        // Command check prevents showing local `/` commands as chat
+
         if !msg.starts_with('/') {
             self.messages.push(ChatMessage {
                 role: Role::Player,
                 content: msg.clone(),
             });
-            self.is_typing = true; // Block input while waiting for response
-            
-            // Auto-scroll to bottom on new message
-            self.scroll = self.messages.len().saturating_mul(2) as u16;
+            self.is_typing = true;
+            self.message_count += 1;
+            self.scroll = u16::MAX; // auto-scroll to bottom
         }
-        
+
         self.input.clear();
         Some(msg)
     }
 
     pub fn append_chunk(&mut self, chunk: &str) {
         self.current_streaming_message.push_str(chunk);
+        // Advance spinner every chunk
+        self.spinner_frame = (self.spinner_frame + 1) % SPINNER_FRAMES.len();
     }
 
     pub fn finish_stream(&mut self) {
         if !self.current_streaming_message.is_empty() {
             self.messages.push(ChatMessage {
-                role: Role::Ai,
+                role: Role::World,
                 content: self.current_streaming_message.clone(),
             });
+            self.message_count += 1;
             self.current_streaming_message.clear();
         }
         self.is_typing = false;
-        self.cursor_state = true; // Reset cursor to solid for next interaction
+        self.cursor_state = true;
+        self.scroll = u16::MAX; // auto-scroll to bottom
     }
-    
+
     pub fn add_system_message(&mut self, msg: String) {
-        self.messages.push(ChatMessage {
-            role: Role::System,
-            content: msg,
-        });
-        
-        // Auto-scroll
-        self.scroll = self.messages.len().saturating_mul(2) as u16;
+        // Detect errors vs normal system messages
+        let role = if msg.starts_with('✗') || msg.to_lowercase().contains("error") {
+            Role::Error
+        } else {
+            Role::System
+        };
+        self.messages.push(ChatMessage { role, content: msg });
+        self.scroll = self.messages.len().saturating_mul(3) as u16;
     }
 
     pub fn get_filtered_items(&self) -> Vec<EntityInfo> {
         let items = match self.popup_mode {
-            PopupMode::World => &self.available_worlds,
+            PopupMode::World     => &self.available_worlds,
             PopupMode::Character => &self.available_characters,
-            PopupMode::Model => &self.available_models,
-            _ => return Vec::new(),
+            PopupMode::Model     => &self.available_models,
+            PopupMode::Rules     => &self.available_rules,
+            _                    => return Vec::new(),
         };
 
         if self.popup_search_query.is_empty() {
@@ -152,4 +174,20 @@ impl App {
             .cloned()
             .collect()
     }
+
+    pub fn estimated_cost(&self) -> f64 {
+        // Rough estimate: ~$0.50 per 1M tokens
+        (self.total_tokens as f64 / 1_000_000.0) * 0.50
+    }
+
+    pub fn session_elapsed(&self) -> String {
+        let secs = self.session_start.elapsed().as_secs();
+        if secs < 60 {
+            format!("{}s", secs)
+        } else {
+            format!("{}m{}s", secs / 60, secs % 60)
+        }
+    }
 }
+
+pub const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];

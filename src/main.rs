@@ -15,7 +15,7 @@ use app::App;
 use models::WsMessage;
 use tokio::sync::mpsc;
 
-const TICK_RATE: Duration = Duration::from_millis(500); // For cursor blinking
+const TICK_RATE: Duration = Duration::from_millis(150); // Spinner + cursor animation
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -86,6 +86,12 @@ async fn run_app<B: ratatui::backend::Backend>(
                     if let Some(models) = msg.payload.metadata.available_models {
                         app.available_models = models;
                     }
+                    if let Some(rules) = msg.payload.metadata.available_rules {
+                        app.available_rules = rules;
+                    }
+                    if let Some(active) = msg.payload.metadata.active_rules {
+                        app.active_rules = active;
+                    }
                 }
                 "system_update" => {
                     app.add_system_message(msg.payload.content);
@@ -100,11 +106,14 @@ async fn run_app<B: ratatui::backend::Backend>(
                     }
                 }
                 "chat_end" => {
+                    if let Some(total) = msg.payload.metadata.total_tokens {
+                        app.total_tokens += total;
+                    }
                     app.finish_stream();
                     app.status = "Idle".to_string();
                 }
                 "error" => {
-                    app.add_system_message(format!("Server Error: {}", msg.payload.content));
+                    app.add_system_message(format!("✗ {}", msg.payload.content));
                     app.is_typing = false;
                 }
                 _ => {} 
@@ -120,7 +129,10 @@ async fn run_app<B: ratatui::backend::Backend>(
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Esc => {
-                        if app.show_popup {
+                        if app.is_typing {
+                            // Cancel the active stream
+                            let _ = tx_out.send("/cancel".to_string());
+                        } else if app.show_popup {
                             app.show_popup = false;
                             app.popup_mode = app::PopupMode::None;
                             app.input.clear();
@@ -133,10 +145,11 @@ async fn run_app<B: ratatui::backend::Backend>(
                             // --- Popup Selection Confirmed ---
                             let filtered = app.get_filtered_items();
                             let prefix = match app.popup_mode {
-                                app::PopupMode::World => "/world select",
+                                app::PopupMode::World     => "/world select",
                                 app::PopupMode::Character => "/character select",
-                                app::PopupMode::Model => "/model",
-                                _ => "",
+                                app::PopupMode::Model     => "/model",
+                                app::PopupMode::Rules     => "/rules add",
+                                _                         => "",
                             };
                             
                             if !filtered.is_empty() && app.selected_index < filtered.len() {
@@ -174,6 +187,10 @@ async fn run_app<B: ratatui::backend::Backend>(
                                 app.show_popup = true;
                                 app.popup_mode = app::PopupMode::Model;
                                 app.selected_index = 0;
+                            } else if app.input == "/rules " && !app.available_rules.is_empty() {
+                                app.show_popup = true;
+                                app.popup_mode = app::PopupMode::Rules;
+                                app.selected_index = 0;
                             }
                         }
                     }
@@ -206,9 +223,12 @@ async fn run_app<B: ratatui::backend::Backend>(
             }
         }
         
-        // --- TICK UPDATE (Cursor Animation) ---
+        // --- TICK UPDATE (cursor blink + spinner) ---
         if last_tick.elapsed() >= TICK_RATE {
-            app.cursor_state = !app.cursor_state; // Toggle cursor blink
+            app.cursor_state = !app.cursor_state;
+            if app.is_typing {
+                app.spinner_frame = (app.spinner_frame + 1) % 10;
+            }
             last_tick = Instant::now();
         }
     }
