@@ -1,3 +1,5 @@
+use crate::models::EntityInfo;
+
 #[derive(Clone, PartialEq)]
 pub enum Role {
     Player,
@@ -9,6 +11,13 @@ pub enum Role {
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
+}
+
+#[derive(Clone, PartialEq)]
+pub enum PopupMode {
+    World,
+    Character,
+    None,
 }
 
 pub struct App {
@@ -26,6 +35,13 @@ pub struct App {
     pub cursor_state: bool,
     pub tps: f64,
     pub active_model: String,
+    
+    // Popup State
+    pub show_popup: bool,
+    pub popup_mode: PopupMode,
+    pub selected_index: usize,
+    pub available_worlds: Vec<EntityInfo>,
+    pub available_characters: Vec<EntityInfo>,
 }
 
 impl App {
@@ -44,6 +60,12 @@ impl App {
             cursor_state: true,
             tps: 0.0,
             active_model: "Unknown".to_string(),
+            
+            show_popup: false,
+            popup_mode: PopupMode::None,
+            selected_index: 0,
+            available_worlds: Vec::new(),
+            available_characters: Vec::new(),
         }
     }
 

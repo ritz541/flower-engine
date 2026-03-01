@@ -1,10 +1,30 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Style, Modifier},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, List, ListItem, Wrap, Padding},
+    widgets::{Block, Borders, Paragraph, List, ListItem, Wrap, Padding, Clear},
     Frame,
 };
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
+}
 
 use crate::app::{App, Role};
 
@@ -91,4 +111,33 @@ pub fn draw(f: &mut Frame, app: &App) {
         .style(input_style)
         .block(Block::default().borders(Borders::ALL).title(" Input (/model, /world, or message) ").padding(Padding::horizontal(1)));
     f.render_widget(input_paragraph, chunks[2]);
+    
+    // --- Floating Popup Selection ---
+    if app.show_popup {
+        let area = centered_rect(60, 40, f.size());
+        let _ = f.render_widget(Clear, area); // Clear background
+        
+        let (title, items, selected) = match app.popup_mode {
+            crate::app::PopupMode::World => {
+                (" Select World (Arrows/Enter) ", &app.available_worlds, app.selected_index)
+            },
+            crate::app::PopupMode::Character => {
+                (" Select Character (Arrows/Enter) ", &app.available_characters, app.selected_index)
+            },
+            _ => (" Error ", &app.available_worlds, 0)
+        };
+        
+        let list_items: Vec<ListItem> = items.iter().enumerate().map(|(i, entity)| {
+            let mut style = Style::default().fg(Color::White);
+            if i == selected {
+                style = style.bg(Color::DarkGray).add_modifier(Modifier::BOLD);
+            }
+            ListItem::new(format!(" {} ({})", entity.name, entity.id)).style(style)
+        }).collect();
+        
+        let popup_list = List::new(list_items)
+            .block(Block::default().title(title).borders(Borders::ALL).padding(Padding::uniform(1)));
+            
+        f.render_widget(popup_list, area);
+    }
 }

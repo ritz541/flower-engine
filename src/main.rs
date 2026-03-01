@@ -77,6 +77,12 @@ async fn run_app<B: ratatui::backend::Backend>(
                     if let Some(c_id) = msg.payload.metadata.character_id {
                         app.character_id = c_id;
                     }
+                    if let Some(worlds) = msg.payload.metadata.available_worlds {
+                        app.available_worlds = worlds;
+                    }
+                    if let Some(chars) = msg.payload.metadata.available_characters {
+                        app.available_characters = chars;
+                    }
                 }
                 "system_update" => {
                     app.add_system_message(msg.payload.content);
@@ -111,21 +117,78 @@ async fn run_app<B: ratatui::backend::Backend>(
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Esc => {
-                        app.should_quit = true;
+                        if app.show_popup {
+                            app.show_popup = false;
+                            app.popup_mode = app::PopupMode::None;
+                            app.input.clear();
+                        } else {
+                            app.should_quit = true;
+                        }
                     }
                     KeyCode::Enter => {
-                        if let Some(msg) = app.submit_message() {
-                            // If local command `/` just push to WS directly to be handled
+                        if app.show_popup {
+                            // --- Popup Selection Confirmed ---
+                            let (prefix, items) = match app.popup_mode {
+                                app::PopupMode::World => ("/world select", &app.available_worlds),
+                                app::PopupMode::Character => ("/character select", &app.available_characters),
+                                _ => ("", &app.available_worlds),
+                            };
+                            
+                            if !items.is_empty() && app.selected_index < items.len() {
+                                let selection = &items[app.selected_index];
+                                let cmd = format!("{} {}", prefix, selection.id);
+                                let _ = tx_out.send(cmd);
+                            }
+                            
+                            app.show_popup = false;
+                            app.popup_mode = app::PopupMode::None;
+                            app.input.clear();
+                            
+                        } else if let Some(msg) = app.submit_message() {
                             let _ = tx_out.send(msg);
                         }
                     }
-                    KeyCode::Char(c) => app.handle_char(c),
-                    KeyCode::Backspace => app.handle_backspace(),
+                    KeyCode::Char(c) => {
+                        app.handle_char(c);
+                        
+                        // --- Trigger Popup on exact string match ---
+                        if app.input == "/world " && !app.available_worlds.is_empty() {
+                            app.show_popup = true;
+                            app.popup_mode = app::PopupMode::World;
+                            app.selected_index = 0;
+                        } else if app.input == "/character " && !app.available_characters.is_empty() {
+                            app.show_popup = true;
+                            app.popup_mode = app::PopupMode::Character;
+                            app.selected_index = 0;
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        app.handle_backspace();
+                        if app.show_popup {
+                            app.show_popup = false; // Close popup if they backspace out of the command
+                            app.popup_mode = app::PopupMode::None;
+                        }
+                    }
                     KeyCode::Up => {
-                        app.scroll = app.scroll.saturating_sub(1);
+                        if app.show_popup {
+                            app.selected_index = app.selected_index.saturating_sub(1);
+                        } else {
+                            app.scroll = app.scroll.saturating_sub(1);
+                        }
                     }
                     KeyCode::Down => {
-                        app.scroll = app.scroll.saturating_add(1);
+                        if app.show_popup {
+                            let max = match app.popup_mode {
+                                app::PopupMode::World => app.available_worlds.len().saturating_sub(1),
+                                app::PopupMode::Character => app.available_characters.len().saturating_sub(1),
+                                _ => 0
+                            };
+                            if app.selected_index < max {
+                                app.selected_index += 1;
+                            }
+                        } else {
+                            app.scroll = app.scroll.saturating_add(1);
+                        }
                     }
                     _ => {}
                 }
