@@ -8,6 +8,15 @@ use ratatui::{
 
 use crate::app::{App, PopupMode, Role, SPINNER_FRAMES};
 
+// ── Colors & Constants ────────────────────────────────────────────────────────
+
+const COLOR_USER: Color = Color::White;
+const COLOR_AI: Color = Color::Cyan;
+const COLOR_SYSTEM: Color = Color::Indexed(244); // Gray
+const COLOR_ERROR: Color = Color::Red;
+const COLOR_HEADER_BG: Color = Color::Indexed(235); // Very dark gray
+const COLOR_ACCENT: Color = Color::Indexed(141); // Purple-ish
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -64,264 +73,211 @@ fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
 // ── Draw ──────────────────────────────────────────────────────────────────────
 
 pub fn draw(f: &mut Frame, app: &mut App) {
-
     // ── Root layout ────────────────────────────────────────────────────────
     let root = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // header
-            Constraint::Min(1),    // content
-            Constraint::Length(1), // divider
-            Constraint::Length(2), // input
+            Constraint::Length(1), // Header
+            Constraint::Min(1),    // Content
+            Constraint::Length(1), // Divider/Status
+            Constraint::Length(1), // Input
         ])
         .split(f.size());
 
     // ── HEADER ─────────────────────────────────────────────────────────────
     let model_short = app.active_model.split('/').last().unwrap_or(&app.active_model);
     let header_line = Line::from(vec![
-        Span::styled(" 🌸 The Flower  ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("  🌍 {}  ", app.world_id), Style::default().fg(Color::White)),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("  👤 {}  ", app.character_id), Style::default().fg(Color::White)),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("  ⚡ {}  ", model_short), Style::default().fg(Color::Indexed(141))),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("  {:.1} t/s  ", app.tps), Style::default().fg(Color::Green)),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("  {} msgs  ", app.message_count), Style::default().fg(Color::DarkGray)),
+        Span::styled(" 🌸 THE FLOWER ", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+        Span::styled(" │ ", Style::default().fg(Color::Indexed(239))),
+        Span::styled(format!("{} ", app.world_id), Style::default().fg(COLOR_AI)),
+        Span::styled("• ", Style::default().fg(Color::Indexed(239))),
+        Span::styled(format!("{} ", app.character_id), Style::default().fg(Color::White)),
+        Span::styled(" │ ", Style::default().fg(Color::Indexed(239))),
+        Span::styled(format!("{} ", model_short), Style::default().fg(COLOR_ACCENT)),
+        Span::styled(format!("({:.1} t/s) ", app.tps), Style::default().fg(Color::Indexed(240))),
     ]);
-    f.render_widget(Paragraph::new(header_line), root[0]);
+    f.render_widget(
+        Paragraph::new(header_line).style(Style::default().bg(COLOR_HEADER_BG)),
+        root[0]
+    );
 
-    // ── MIDDLE: sidebar │ chat ────────────────────────────────────────────
-    let middle = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(22),
-            Constraint::Length(1),
-            Constraint::Min(1),
-        ])
-        .split(root[1]);
+    // ── CHAT CONTENT ───────────────────────────────────────────────────────
+    let chat_pane_width = root[1].width.saturating_sub(4) as usize; // padding
+    let indent_width = 4usize;
+    let body_width = chat_pane_width.saturating_sub(indent_width).max(20);
 
-    // ── SIDEBAR ────────────────────────────────────────────────────────────
+    let mut chat_lines: Vec<Line> = vec![Line::from("")]; // Top padding
+
+    // Helper to push stylized messages
+    let mut push_message = |lines: &mut Vec<Line>, role: Role, text: &str| {
+        let (icon, label, color) = match role {
+            Role::Player => ("○", "YOU", COLOR_USER),
+            Role::World  => ("✦", "NARRATOR", COLOR_AI),
+            Role::System => ("ℹ", "SYSTEM", COLOR_SYSTEM),
+            Role::Error  => ("✖", "ERROR", COLOR_ERROR),
+        };
+
+        // Header line for the message
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} ", icon), Style::default().fg(color).add_modifier(Modifier::BOLD)),
+            Span::styled(label, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+        ]));
+
+        // Body text
+        let wrapped = wrap_text(text, body_width);
+        for segment in wrapped {
+            lines.push(Line::from(vec![
+                Span::raw(" ".repeat(indent_width)),
+                Span::styled(segment, Style::default().fg(if role == Role::World { Color::White } else { color })),
+            ]));
+        }
+        lines.push(Line::from("")); // Gap
+    };
+
+    // Render all messages
+    for msg in &app.messages.clone() {
+        push_message(&mut chat_lines, msg.role.clone(), &msg.content);
+    }
+
+    // Live streaming message
+    if app.is_typing {
+        let spinner = SPINNER_FRAMES[app.spinner_frame % SPINNER_FRAMES.len()];
+        let (icon, label, color) = ("✦", "NARRATOR", COLOR_AI);
+        
+        chat_lines.push(Line::from(vec![
+            Span::styled(format!("{} ", icon), Style::default().fg(color).add_modifier(Modifier::BOLD)),
+            Span::styled(label, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+            Span::styled(format!("  {} ", spinner), Style::default().fg(Color::Indexed(240))),
+        ]));
+
+        if !app.current_streaming_message.is_empty() {
+            let wrapped = wrap_text(&app.current_streaming_message, body_width);
+            for segment in wrapped {
+                chat_lines.push(Line::from(vec![
+                    Span::raw(" ".repeat(indent_width)),
+                    Span::styled(segment, Style::default().fg(Color::White)),
+                ]));
+            }
+        }
+    }
+
+    // Scroll management
+    let chat_height = root[1].height;
+    let total_lines = chat_lines.len() as u16;
+    let max_scroll = total_lines.saturating_sub(chat_height);
+    let safe_scroll = app.scroll.min(max_scroll);
+    app.scroll = safe_scroll;
+
+    f.render_widget(
+        Paragraph::new(chat_lines)
+            .block(Block::default().padding(Padding::horizontal(2)))
+            .scroll((safe_scroll, 0)),
+        root[1]
+    );
+
+    // ── STATUS / DIVIDER ──────────────────────────────────────────────────
+    let cost_str = format!("${:.4}", app.estimated_cost());
     let token_str = if app.total_tokens >= 1000 {
         format!("{:.1}k", app.total_tokens as f64 / 1000.0)
     } else {
         app.total_tokens.to_string()
     };
-    let cost_str = format!("${:.4}", app.estimated_cost());
 
-    let mut sidebar_lines: Vec<Line> = vec![
-        Line::from(""),
-        Line::from(Span::styled(" SESSION", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format!("  World   {}", app.world_id),        Style::default().fg(Color::Cyan))),
-        Line::from(Span::styled(format!("  Char    {}", app.character_id),     Style::default().fg(Color::White))),
-        Line::from(Span::styled(format!("  Model   {}", model_short),          Style::default().fg(Color::Indexed(141)))),
-        Line::from(""),
-        Line::from(Span::styled(" RULES", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD))),
-    ];
-    if app.active_rules.is_empty() {
-        sidebar_lines.push(Line::from(Span::styled("  (none)", Style::default().fg(Color::DarkGray))));
-    } else {
-        for r in &app.active_rules {
-            sidebar_lines.push(Line::from(Span::styled(format!("  • {}", r), Style::default().fg(Color::Yellow))));
-        }
-    }
-    sidebar_lines.extend([
-        Line::from(""),
-        Line::from(Span::styled(" STATS", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format!("  TPS    {:.1}", app.tps),       Style::default().fg(Color::Green))),
-        Line::from(Span::styled(format!("  Tokens {}", token_str),         Style::default().fg(Color::White))),
-        Line::from(Span::styled(format!("  Msgs   {}", app.message_count), Style::default().fg(Color::White))),
-        Line::from(Span::styled(format!("  Cost   {}", cost_str),          Style::default().fg(Color::Indexed(208)))),
-        Line::from(Span::styled(format!("  Time   {}", app.session_elapsed()), Style::default().fg(Color::DarkGray))),
+    let status_line = Line::from(vec![
+        Span::styled("─".repeat(2), Style::default().fg(Color::Indexed(239))),
+        Span::styled(format!(" {} tokens ", token_str), Style::default().fg(Color::Indexed(244))),
+        Span::styled("• ", Style::default().fg(Color::Indexed(239))),
+        Span::styled(format!(" {} cost ", cost_str), Style::default().fg(Color::Indexed(244))),
+        Span::styled("• ", Style::default().fg(Color::Indexed(239))),
+        Span::styled(format!(" {} elapsed ", app.session_elapsed()), Style::default().fg(Color::Indexed(244))),
+        Span::styled("─".repeat(root[2].width as usize), Style::default().fg(Color::Indexed(239))),
     ]);
-    f.render_widget(Paragraph::new(sidebar_lines).block(Block::default().borders(Borders::NONE)), middle[0]);
-
-    // Thin vertical divider
-    let div_height = middle[1].height as usize;
-    let div_lines: Vec<Line> = (0..div_height)
-        .map(|_| Line::from(Span::styled("│", Style::default().fg(Color::DarkGray))))
-        .collect();
-    f.render_widget(Paragraph::new(div_lines), middle[1]);
-
-    // ── CHAT PANE (pre-wrapped, no Ratatui Wrap) ──────────────────────────
-
-    // Body text width: pane width minus 2 padding, minus 8 chars for tag + spaces
-    let chat_pane_width = middle[2].width.saturating_sub(2) as usize; // inner after padding
-    let tag_width = 8usize; // " GM   " (6) + "  " (2)
-    let body_width = chat_pane_width.saturating_sub(tag_width).max(20);
-
-    let mut chat_lines: Vec<Line> = vec![Line::from("")]; // top padding
-
-    // Helper closure: add a full pre-wrapped message to chat_lines
-    let push_message = |chat_lines: &mut Vec<Line>,
-                             tag: &'static str,
-                             tag_bg: Color,
-                             body_color: Color,
-                             text: &str| {
-        let wrapped = wrap_text(text, body_width);
-        let mut is_first = true;
-        for segment in wrapped {
-            let line = if is_first {
-                is_first = false;
-                Line::from(vec![
-                    Span::styled(tag, Style::default().bg(tag_bg).fg(Color::Black).add_modifier(Modifier::BOLD)),
-                    Span::raw("  "),
-                    Span::styled(segment, Style::default().fg(body_color)),
-                ])
-            } else {
-                Line::from(vec![
-                    Span::raw("        "), // same width as tag+"  "
-                    Span::styled(segment, Style::default().fg(body_color)),
-                ])
-            };
-            chat_lines.push(line);
-        }
-        chat_lines.push(Line::from("")); // gap after message
-    };
-
-    // Build all completed messages
-    for msg in &app.messages.clone() {
-        let (tag, tag_bg, body_color): (&'static str, Color, Color) = match msg.role {
-            Role::Player => (" You  ", Color::White,        Color::White),
-            Role::World  => (" GM   ", Color::Cyan,         Color::Indexed(14)),
-            Role::System => (" Info ", Color::Indexed(220), Color::Indexed(220)),
-            Role::Error  => (" Err  ", Color::Red,          Color::Red),
-        };
-        push_message(&mut chat_lines, tag, tag_bg, body_color, &msg.content.clone());
-    }
-
-    // Live streaming line
-    if app.is_typing {
-        let spinner = SPINNER_FRAMES[app.spinner_frame % SPINNER_FRAMES.len()];
-        if app.current_streaming_message.is_empty() {
-            chat_lines.push(Line::from(vec![
-                Span::styled(" GM   ", Style::default().bg(Color::Cyan).fg(Color::Black).add_modifier(Modifier::BOLD)),
-                Span::raw("  "),
-                Span::styled(spinner.to_string(), Style::default().fg(Color::DarkGray)),
-            ]));
-        } else {
-            let streaming_text = app.current_streaming_message.clone();
-            let wrapped = wrap_text(&streaming_text, body_width);
-            let mut first = true;
-            for segment in wrapped {
-                let line = if first {
-                    first = false;
-                    Line::from(vec![
-                        Span::styled(" GM   ", Style::default().bg(Color::Cyan).fg(Color::Black).add_modifier(Modifier::BOLD)),
-                        Span::raw("  "),
-                        Span::styled(segment, Style::default().fg(Color::Indexed(14))),
-                    ])
-                } else {
-                    Line::from(vec![
-                        Span::raw("        "),
-                        Span::styled(segment, Style::default().fg(Color::Indexed(14))),
-                    ])
-                };
-                chat_lines.push(line);
-            }
-        }
-    }
-
-    // Scroll clamping with accurate line count (no Ratatui Wrap)
-    let chat_height = middle[2].height;
-    let total_lines = chat_lines.len() as u16;
-    let max_scroll = total_lines.saturating_sub(chat_height);
-    let safe_scroll = app.scroll.min(max_scroll);
-    app.scroll = safe_scroll; // write back so Up/Down work from correct position
-
-    let chat = Paragraph::new(chat_lines)
-        .block(Block::default().borders(Borders::NONE).padding(Padding::horizontal(1)))
-        .scroll((safe_scroll, 0));
-    f.render_widget(chat, middle[2]);
-
-    // ── HORIZONTAL DIVIDER ────────────────────────────────────────────────
-    let divider = Paragraph::new(Line::from(Span::styled(
-        "─".repeat(root[2].width as usize),
-        Style::default().fg(Color::DarkGray),
-    )));
-    f.render_widget(divider, root[2]);
+    f.render_widget(Paragraph::new(status_line), root[2]);
 
     // ── INPUT BAR ─────────────────────────────────────────────────────────
-    let cursor = if app.cursor_state { "▌" } else { " " };
-    let input_line = if app.is_typing {
-        let spinner = SPINNER_FRAMES[app.spinner_frame % SPINNER_FRAMES.len()];
+    let cursor = if app.cursor_state { "▋" } else { " " };
+    let prompt = if app.is_typing {
         Line::from(vec![
-            Span::styled(format!("  {} ", spinner), Style::default().fg(Color::DarkGray)),
-            Span::styled("Narrating…", Style::default().fg(Color::DarkGray)),
-            Span::styled("   Esc to stop", Style::default().fg(Color::Indexed(238))),
-        ])
-    } else if app.input.is_empty() {
-        Line::from(vec![
-            Span::styled("  › ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                "/world  /character  /model  /rules — or type your action",
-                Style::default().fg(Color::DarkGray),
-            ),
-            Span::styled(cursor, Style::default().fg(Color::Cyan)),
+            Span::styled("  ✦ ", Style::default().fg(COLOR_AI)),
+            Span::styled("Narrating...", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::ITALIC)),
+            Span::styled("  (Esc to stop)", Style::default().fg(Color::Indexed(236))),
         ])
     } else {
+        let input_text = if app.input.is_empty() {
+            Span::styled("How do you respond? (/ for commands)", Style::default().fg(Color::Indexed(239)))
+        } else {
+            Span::styled(app.input.clone(), Style::default().fg(Color::White))
+        };
         Line::from(vec![
-            Span::styled("  › ", Style::default().fg(Color::Cyan)),
-            Span::styled(app.input.clone(), Style::default().fg(Color::White)),
-            Span::styled(cursor, Style::default().fg(Color::Cyan)),
+            Span::styled("  › ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
+            input_text,
+            Span::styled(cursor, Style::default().fg(COLOR_AI)),
         ])
     };
-    f.render_widget(Paragraph::new(input_line), root[3]);
+    f.render_widget(Paragraph::new(prompt), root[3]);
 
-    // ── SEARCH POPUP ──────────────────────────────────────────────────────
+    // ── COMMAND POPUP ─────────────────────────────────────────────────────
     if app.show_popup {
-        let area = centered_rect(62, 50, f.size());
+        let area = centered_rect(60, 40, f.size());
         f.render_widget(Clear, area);
 
         let popup_title = match app.popup_mode {
-            PopupMode::World     => " 🌍 Select World ",
-            PopupMode::Character => " 👤 Select Character ",
-            PopupMode::Model     => " ⚡ Select Model ",
-            PopupMode::Rules     => " 📜 Activate Rule ",
-            _                    => " Select ",
+            PopupMode::World     => " WORLD ",
+            PopupMode::Character => " CHARACTER ",
+            PopupMode::Model     => " MODEL ",
+            PopupMode::Rules     => " RULES ",
+            _                    => " SELECT ",
         };
 
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Indexed(239)))
+            .title(Span::styled(popup_title, Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)))
+            .padding(Padding::horizontal(1));
+        
         let popup_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Min(1)])
-            .split(area);
+            .constraints([Constraint::Length(2), Constraint::Min(1)])
+            .split(block.inner(area));
+        
+        f.render_widget(block, area);
 
-        let search_cursor = if app.cursor_state { "▌" } else { " " };
-        let search_bar = Paragraph::new(format!("  🔍 {}{}", app.popup_search_query, search_cursor))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(popup_title)
-                    .border_style(Style::default().fg(Color::Cyan)),
-            )
-            .style(Style::default().fg(Color::White));
-        f.render_widget(search_bar, popup_layout[0]);
+        // Search Bar
+        let search_cursor = if app.cursor_state { "▋" } else { " " };
+        let search_text = if app.popup_search_query.is_empty() {
+            Span::styled("Search...", Style::default().fg(Color::Indexed(239)))
+        } else {
+            Span::styled(app.popup_search_query.clone(), Style::default().fg(Color::White))
+        };
+        f.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::styled(" 🔍 ", Style::default().fg(Color::Indexed(240))),
+                search_text,
+                Span::styled(search_cursor, Style::default().fg(COLOR_AI)),
+            ])),
+            popup_layout[0]
+        );
 
+        // Results
         let items = app.get_filtered_items();
-        let selected = app.selected_index;
         let list_items: Vec<ListItem> = if items.is_empty() {
-            vec![ListItem::new("  No matches").style(Style::default().fg(Color::DarkGray))]
+            vec![ListItem::new("   No results found").style(Style::default().fg(Color::Indexed(239)))]
         } else {
             items.iter().enumerate().map(|(i, entity)| {
-                let content = format!("  {}  ({})", entity.name, entity.id);
-                if i == selected {
-                    ListItem::new(content).style(
-                        Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
-                    )
+                let content = if i == app.selected_index {
+                    format!(" ❯ {}  ", entity.name)
                 } else {
-                    ListItem::new(content).style(Style::default().fg(Color::White))
-                }
+                    format!("   {}  ", entity.name)
+                };
+                let style = if i == app.selected_index {
+                    Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD).bg(Color::Indexed(236))
+                } else {
+                    Style::default().fg(Color::Indexed(244))
+                };
+                ListItem::new(content).style(style)
             }).collect()
         };
 
-        let popup_list = List::new(list_items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::DarkGray))
-                .padding(Padding::horizontal(1)),
-        );
-        f.render_widget(popup_list, popup_layout[1]);
+        f.render_widget(List::new(list_items), popup_layout[1]);
     }
 }
