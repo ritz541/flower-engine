@@ -78,6 +78,13 @@ async fn run_app<B: ratatui::backend::Backend>(
                 match msg.event.as_str() {
                     "sync_state" => {
                         app.status = "Synced".to_string();
+                        if let Some(model) = msg.payload.metadata.model { 
+                            app.active_model = model.clone();
+                            if let Some(info) = app.available_models.iter().find(|m| m.id == model) {
+                                app.active_prompt_price = info.prompt_price;
+                                app.active_completion_price = info.completion_price;
+                            }
+                        }
                         if let Some(w_id) = msg.payload.metadata.world_id { app.world_id = w_id; }
                         if let Some(c_id) = msg.payload.metadata.character_id { app.character_id = c_id; }
                         if let Some(worlds) = msg.payload.metadata.available_worlds { app.available_worlds = worlds; }
@@ -104,6 +111,14 @@ async fn run_app<B: ratatui::backend::Backend>(
                     }
                     "system_update" => {
                         app.add_system_message(msg.payload.content);
+                        if let Some(model) = msg.payload.metadata.model { 
+                            app.active_model = model.clone();
+                            app.model_confirmed = true;
+                            if let Some(info) = app.available_models.iter().find(|m| m.id == model) {
+                                app.active_prompt_price = info.prompt_price;
+                                app.active_completion_price = info.completion_price;
+                            }
+                        }
                     }
                     "chat_chunk" => {
                         app.append_chunk(&msg.payload.content);
@@ -221,6 +236,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                             KeyCode::Char(c) => {
                                 if app.show_popup {
                                     app.popup_search_query.push(c);
+                                    app.input.push(c);
                                     app.set_popup_index(0);
                                 } else {
                                     app.handle_char(c);
@@ -241,9 +257,15 @@ async fn run_app<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Backspace => {
-                                if app.show_popup { app.popup_search_query.pop(); app.set_popup_index(0); }
-                                else { app.handle_backspace(); }
+                                if app.show_popup {
+                                    app.popup_search_query.pop();
+                                    app.input.pop();
+                                    app.set_popup_index(0);
+                                } else {
+                                    app.handle_backspace();
+                                }
                             }
+
                             KeyCode::Up => {
                                 if app.show_popup { app.set_popup_index(app.selected_index.saturating_sub(1)); }
                                 else { app.scroll = app.scroll.saturating_sub(1); }

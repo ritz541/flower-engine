@@ -47,6 +47,7 @@ pub struct App {
     pub active_model: String,
     pub active_prompt_price: f64,
     pub active_completion_price: f64,
+    pub model_confirmed: bool,
 
     // Stats
     pub message_count: usize,
@@ -94,6 +95,7 @@ impl App {
             active_model: "Unknown".to_string(),
             active_prompt_price: 0.0,
             active_completion_price: 0.0,
+            model_confirmed: false,
 
             message_count: 0,
             total_tokens: 0,
