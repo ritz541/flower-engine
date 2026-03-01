@@ -17,6 +17,7 @@ pub struct ChatMessage {
 pub enum PopupMode {
     World,
     Character,
+    Model,
     None,
 }
 
@@ -40,8 +41,10 @@ pub struct App {
     pub show_popup: bool,
     pub popup_mode: PopupMode,
     pub selected_index: usize,
+    pub popup_search_query: String,
     pub available_worlds: Vec<EntityInfo>,
     pub available_characters: Vec<EntityInfo>,
+    pub available_models: Vec<EntityInfo>,
 }
 
 impl App {
@@ -64,8 +67,10 @@ impl App {
             show_popup: false,
             popup_mode: PopupMode::None,
             selected_index: 0,
+            popup_search_query: String::new(),
             available_worlds: Vec::new(),
             available_characters: Vec::new(),
+            available_models: Vec::new(),
         }
     }
 
@@ -127,5 +132,24 @@ impl App {
         
         // Auto-scroll
         self.scroll = self.messages.len().saturating_mul(2) as u16;
+    }
+
+    pub fn get_filtered_items(&self) -> Vec<EntityInfo> {
+        let items = match self.popup_mode {
+            PopupMode::World => &self.available_worlds,
+            PopupMode::Character => &self.available_characters,
+            PopupMode::Model => &self.available_models,
+            _ => return Vec::new(),
+        };
+
+        if self.popup_search_query.is_empty() {
+            return items.clone();
+        }
+
+        let q = self.popup_search_query.to_lowercase();
+        items.iter()
+            .filter(|e| e.name.to_lowercase().contains(&q) || e.id.to_lowercase().contains(&q))
+            .cloned()
+            .collect()
     }
 }

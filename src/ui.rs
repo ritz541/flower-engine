@@ -117,15 +117,29 @@ pub fn draw(f: &mut Frame, app: &App) {
         let area = centered_rect(60, 40, f.size());
         let _ = f.render_widget(Clear, area); // Clear background
         
-        let (title, items, selected) = match app.popup_mode {
-            crate::app::PopupMode::World => {
-                (" Select World (Arrows/Enter) ", &app.available_worlds, app.selected_index)
-            },
-            crate::app::PopupMode::Character => {
-                (" Select Character (Arrows/Enter) ", &app.available_characters, app.selected_index)
-            },
-            _ => (" Error ", &app.available_worlds, 0)
+        let title = match app.popup_mode {
+            crate::app::PopupMode::World => " Select World (Search / Arrows / Enter) ",
+            crate::app::PopupMode::Character => " Select Character (Search / Arrows / Enter) ",
+            crate::app::PopupMode::Model => " Select Model (Search / Arrows / Enter) ",
+            _ => " Error "
         };
+        
+        let popup_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Search bar
+                Constraint::Min(1),    // List of filtered items
+            ])
+            .split(area);
+            
+        let cursor = if app.cursor_state { "|" } else { " " };
+        let search_text = format!("> {}{}", app.popup_search_query, cursor);
+        let search_para = Paragraph::new(search_text)
+            .block(Block::default().borders(Borders::ALL).title(title));
+        f.render_widget(search_para, popup_layout[0]);
+        
+        let items = app.get_filtered_items();
+        let selected = app.selected_index;
         
         let list_items: Vec<ListItem> = items.iter().enumerate().map(|(i, entity)| {
             let mut style = Style::default().fg(Color::White);
@@ -136,8 +150,8 @@ pub fn draw(f: &mut Frame, app: &App) {
         }).collect();
         
         let popup_list = List::new(list_items)
-            .block(Block::default().title(title).borders(Borders::ALL).padding(Padding::uniform(1)));
+            .block(Block::default().borders(Borders::ALL).padding(Padding::uniform(1)));
             
-        f.render_widget(popup_list, area);
+        f.render_widget(popup_list, popup_layout[1]);
     }
 }

@@ -10,7 +10,16 @@ pub async fn start_ws_client(
     mut rx_out: mpsc::UnboundedReceiver<String>,
 ) {
     let url = Url::parse("ws://localhost:8000/ws/rpc").unwrap();
-    let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+    
+    // Retry loop — Python backend may still be warming up
+    let ws_stream = loop {
+        match connect_async(url.clone()).await {
+            Ok((stream, _)) => break stream,
+            Err(_) => {
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            }
+        }
+    };
 
     let (mut write, mut read) = ws_stream.split();
 

@@ -30,4 +30,5 @@ pub struct Metadata {
     pub supported_models: Option<Vec<String>>,
     pub available_worlds: Option<Vec<EntityInfo>>,
     pub available_characters: Option<Vec<EntityInfo>>,
+    pub available_models: Option<Vec<EntityInfo>>,
 }
