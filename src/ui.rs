@@ -11,11 +11,12 @@ use crate::app::{App, PopupMode, Role, SPINNER_FRAMES};
 // ── Colors & Constants ────────────────────────────────────────────────────────
 
 const COLOR_USER: Color = Color::White;
-const COLOR_AI: Color = Color::Cyan;
-const COLOR_SYSTEM: Color = Color::Indexed(244); // Gray
-const COLOR_ERROR: Color = Color::Red;
-const COLOR_HEADER_BG: Color = Color::Indexed(235); // Very dark gray
-const COLOR_ACCENT: Color = Color::Indexed(141); // Purple-ish
+const COLOR_AI: Color = Color::Indexed(211);     // Soft Rose/Pink
+const COLOR_SYSTEM: Color = Color::Indexed(243); // Dimmed Gray
+const COLOR_ERROR: Color = Color::Indexed(160);  // Soft Red
+const COLOR_HEADER_BG: Color = Color::Indexed(232); // Deep Black-Gray
+const COLOR_ACCENT: Color = Color::Indexed(218); // Lighter Pink
+const COLOR_DIVIDER: Color = Color::Indexed(235); // Subtle separator
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -92,14 +93,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     // ── HEADER ─────────────────────────────────────────────────────────────
     let model_short = app.active_model.split('/').last().unwrap_or(&app.active_model);
     let header_line = Line::from(vec![
-        Span::styled(" 🌸 THE FLOWER ", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        Span::styled(" │ ", Style::default().fg(Color::Indexed(239))),
-        Span::styled(format!("{} ", app.world_id), Style::default().fg(COLOR_AI)),
-        Span::styled("• ", Style::default().fg(Color::Indexed(239))),
-        Span::styled(format!("{} ", app.character_id), Style::default().fg(Color::White)),
-        Span::styled(" │ ", Style::default().fg(Color::Indexed(239))),
+        Span::styled(" 🌸 THE FLOWER ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
+        Span::styled(" │ ", Style::default().fg(COLOR_DIVIDER)),
+        Span::styled(format!("{} ", app.world_id), Style::default().fg(Color::White)),
+        Span::styled("• ", Style::default().fg(COLOR_DIVIDER)),
+        Span::styled(format!("{} ", app.character_id), Style::default().fg(Color::Indexed(248))),
+        Span::styled(" │ ", Style::default().fg(COLOR_DIVIDER)),
         Span::styled(format!("{} ", model_short), Style::default().fg(COLOR_ACCENT)),
-        Span::styled(format!("({:.1} t/s) ", app.tps), Style::default().fg(Color::Indexed(240))),
+        Span::styled(format!("({:.1} t/s) ", app.tps), Style::default().fg(Color::Indexed(238))),
     ]);
     f.render_widget(
         Paragraph::new(header_line).style(Style::default().bg(COLOR_HEADER_BG)),
@@ -119,9 +120,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let chat_area = middle[0];
     let sidebar_area = middle[1];
 
-    // Background for chat
-    f.render_widget(Block::default().bg(Color::Indexed(234)), chat_area);
-
     // ── CHAT CONTENT ───────────────────────────────────────────────────────
     let chat_pane_width = chat_area.width.saturating_sub(4) as usize; 
     let indent_width = 4usize;
@@ -130,9 +128,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let mut chat_lines: Vec<Line> = vec![Line::from("")]; // Top padding
 
     // Helper to push stylized messages
-    let mut push_message = |lines: &mut Vec<Line>, role: Role, text: &str| {
+    let push_message = |lines: &mut Vec<Line>, role: Role, text: &str| {
         let (icon, label, color) = match role {
-            Role::Player => ("○", "YOU", COLOR_USER),
+            Role::Player => ("○", "YOU", Color::White),
             Role::World  => ("✦", "NARRATOR", COLOR_AI),
             Role::System => ("ℹ", "SYSTEM", COLOR_SYSTEM),
             Role::Error  => ("✖", "ERROR", COLOR_ERROR),
@@ -163,12 +161,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     // Live streaming message
     if app.is_typing {
         let spinner = SPINNER_FRAMES[app.spinner_frame % SPINNER_FRAMES.len()];
-        let (icon, label, color) = ("✦", "NARRATOR", COLOR_AI);
-        
         chat_lines.push(Line::from(vec![
-            Span::styled(format!("{} ", icon), Style::default().fg(color).add_modifier(Modifier::BOLD)),
-            Span::styled(label, Style::default().fg(color).add_modifier(Modifier::BOLD)),
-            Span::styled(format!("  {} ", spinner), Style::default().fg(Color::Indexed(240))),
+            Span::styled("✦ ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
+            Span::styled("NARRATOR", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
+            Span::styled(format!("  {} ", spinner), Style::default().fg(Color::Indexed(238))),
         ]));
 
         if !app.current_streaming_message.is_empty() {
@@ -199,20 +195,20 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     // ── SIDEBAR ────────────────────────────────────────────────────────────
     let mut sidebar_lines = vec![
         Line::from(""),
-        Line::from(Span::styled(" STATUS", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(" STATUS", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
         Line::from(Span::styled(format!("  {} ", app.status), Style::default().fg(COLOR_AI))),
         Line::from(""),
-        Line::from(Span::styled(" WORLD", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format!("  {} ", app.world_id), Style::default().fg(Color::White))),
+        Line::from(Span::styled(" WORLD", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(format!("  {} ", app.world_id), Style::default().fg(Color::Indexed(244)))),
         Line::from(""),
-        Line::from(Span::styled(" CHARACTER", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format!("  {} ", app.character_id), Style::default().fg(Color::White))),
+        Line::from(Span::styled(" CHARACTER", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(format!("  {} ", app.character_id), Style::default().fg(Color::Indexed(244)))),
         Line::from(""),
-        Line::from(Span::styled(" ACTIVE RULES", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(" ACTIVE RULES", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
     ];
 
     if app.active_rules.is_empty() {
-        sidebar_lines.push(Line::from(Span::styled("  (none)", Style::default().fg(Color::Indexed(237)))));
+        sidebar_lines.push(Line::from(Span::styled("  (none)", Style::default().fg(Color::Indexed(234)))));
     } else {
         for rule in &app.active_rules {
             sidebar_lines.push(Line::from(Span::styled(format!("  • {} ", rule), Style::default().fg(COLOR_ACCENT))));
@@ -221,7 +217,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     f.render_widget(
         Paragraph::new(sidebar_lines)
-            .block(Block::default().borders(Borders::LEFT).border_style(Style::default().fg(Color::Indexed(236)))),
+            .block(Block::default().borders(Borders::NONE)),
         sidebar_area
     );
 
@@ -234,33 +230,32 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     };
 
     let status_line = Line::from(vec![
-        Span::styled("─".repeat(2), Style::default().fg(Color::Indexed(239))),
-        Span::styled(format!(" {} tokens ", token_str), Style::default().fg(Color::Indexed(244))),
-        Span::styled("• ", Style::default().fg(Color::Indexed(239))),
-        Span::styled(format!(" {} cost ", cost_str), Style::default().fg(Color::Indexed(244))),
-        Span::styled("• ", Style::default().fg(Color::Indexed(239))),
-        Span::styled(format!(" {} elapsed ", app.session_elapsed()), Style::default().fg(Color::Indexed(244))),
-        Span::styled("─".repeat(root[2].width as usize), Style::default().fg(Color::Indexed(239))),
+        Span::styled("──", Style::default().fg(COLOR_DIVIDER)),
+        Span::styled(format!(" {} tokens ", token_str), Style::default().fg(Color::Indexed(238))),
+        Span::styled("• ", Style::default().fg(COLOR_DIVIDER)),
+        Span::styled(format!(" {} cost ", cost_str), Style::default().fg(Color::Indexed(238))),
+        Span::styled("• ", Style::default().fg(COLOR_DIVIDER)),
+        Span::styled(format!(" {} elapsed ", app.session_elapsed()), Style::default().fg(Color::Indexed(238))),
+        Span::styled("─".repeat(root[2].width as usize), Style::default().fg(COLOR_DIVIDER)),
     ]);
     f.render_widget(Paragraph::new(status_line), root[2]);
 
     // ── INPUT BAR ─────────────────────────────────────────────────────────
-    let cursor = "█"; // STEADY BOX CURSOR
+    let cursor = "█"; 
     let prompt = if app.is_typing {
         Line::from(vec![
             Span::styled("  ✦ ", Style::default().fg(COLOR_AI)),
-            Span::styled("Narrating...", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::ITALIC)),
-            Span::styled("  (Esc to stop)", Style::default().fg(Color::Indexed(236))),
+            Span::styled("Narrating...", Style::default().fg(Color::Indexed(236)).add_modifier(Modifier::ITALIC)),
         ])
     } else {
         let input_text = if app.input.is_empty() {
-            Span::styled("How do you respond? (/ for commands)", Style::default().fg(Color::Indexed(239)))
+            Span::styled("How do you respond? (/ for commands)", Style::default().fg(Color::Indexed(236)))
         } else {
             Span::styled(app.input.clone(), Style::default().fg(Color::White))
         };
 
         let hint_span = if !app.command_hint.is_empty() {
-            Span::styled(app.command_hint.clone(), Style::default().fg(Color::Indexed(237)))
+            Span::styled(app.command_hint.clone(), Style::default().fg(Color::Indexed(234)))
         } else {
             Span::raw("")
         };
@@ -272,7 +267,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Span::styled(cursor, Style::default().fg(COLOR_AI)),
         ])
     };
-    f.render_widget(Paragraph::new(prompt), root[3]);
+    
+    f.render_widget(
+        Paragraph::new(prompt)
+            .block(Block::default().bg(Color::Indexed(233))),
+        root[3]
+    );
 
     // ── COMMAND SUGGESTIONS (UNDER INPUT) ─────────────────────────────────
     if app.show_popup {
@@ -283,12 +283,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             PopupMode::Character => " CHARACTER ",
             PopupMode::Model     => " MODEL ",
             PopupMode::Rules     => " RULES ",
+            PopupMode::Session   => " SESSION ",
+            PopupMode::Commands  => " COMMANDS ",
             _                    => " SELECT ",
         };
 
         let block = Block::default()
-            .borders(Borders::TOP)
-            .border_style(Style::default().fg(Color::Indexed(237)))
+            .borders(Borders::NONE)
             .title(Span::styled(format!(" {} ", popup_title), Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)))
             .padding(Padding::horizontal(2));
         
@@ -297,26 +298,29 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
         let items = app.get_filtered_items();
         let list_items: Vec<ListItem> = if items.is_empty() {
-            vec![ListItem::new("   No matches found").style(Style::default().fg(Color::Indexed(239)))]
+            vec![ListItem::new("   No matches found").style(Style::default().fg(Color::Indexed(235)))]
         } else {
             items.iter().enumerate().map(|(i, entity)| {
                 let is_selected = i == app.selected_index;
-                let content = if is_selected {
+                let content = if app.popup_mode == PopupMode::Commands {
+                    format!(" {:<20}   {} ", entity.id, entity.name)
+                } else if is_selected {
                     format!(" ❯ {}  ", entity.name)
                 } else {
                     format!("   {}  ", entity.name)
                 };
+                
                 let style = if is_selected {
                     Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(Color::Indexed(244))
+                    Style::default().fg(Color::Indexed(238))
                 };
                 ListItem::new(content).style(style)
             }).collect()
         };
 
         f.render_stateful_widget(
-            List::new(list_items).highlight_style(Style::default().bg(Color::Indexed(236))),
+            List::new(list_items).highlight_style(Style::default().bg(Color::Indexed(233))),
             inner_area,
             &mut app.popup_state
         );

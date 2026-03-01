@@ -22,6 +22,8 @@ pub enum PopupMode {
     Character,
     Model,
     Rules,
+    Session,
+    Commands,
     None,
 }
 
@@ -31,6 +33,7 @@ pub struct App {
     pub input: String,
     pub world_id: String,
     pub character_id: String,
+    pub session_id: String,
     pub status: String,
     pub is_typing: bool,
     pub scroll: u16,
@@ -57,6 +60,8 @@ pub struct App {
     pub available_characters: Vec<EntityInfo>,
     pub available_models: Vec<EntityInfo>,
     pub available_rules: Vec<EntityInfo>,
+    pub available_sessions: Vec<EntityInfo>,
+    pub available_commands: Vec<EntityInfo>,
     pub active_rules: Vec<String>,
     pub command_hint: String,
 }
@@ -72,6 +77,7 @@ impl App {
             input: String::new(),
             world_id: "Connecting...".to_string(),
             character_id: "Connecting...".to_string(),
+            session_id: String::new(),
             status: "Initializing...".to_string(),
             is_typing: false,
             scroll: 0,
@@ -95,6 +101,20 @@ impl App {
             available_characters: Vec::new(),
             available_models: Vec::new(),
             available_rules: Vec::new(),
+            available_sessions: Vec::new(),
+            available_commands: vec![
+                EntityInfo { id: "/world select ".to_string(), name: "Select an active world".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/world sync_folder ".to_string(), name: "Monitor folder for lore".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/world attach_lore ".to_string(), name: "Manually add lore string".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/character select ".to_string(), name: "Select your persona".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/model ".to_string(), name: "Hot-swap the AI model".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/session new".to_string(), name: "Start a fresh session".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/session continue ".to_string(), name: "Resume a past session".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/session delete ".to_string(), name: "Delete a past session".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/rules add ".to_string(), name: "Activate a rule YAML".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/rules clear".to_string(), name: "Clear all active rules".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+                EntityInfo { id: "/quit".to_string(), name: "Exit the engine".to_string(), prompt_price: 0.0, completion_price: 0.0 },
+            ],
             active_rules: Vec::new(),
             command_hint: String::new(),
         }
@@ -124,7 +144,7 @@ impl App {
             let cmds = [
                 "/world select", "/world sync_folder", "/world attach_lore",
                 "/character select", "/model", "/session new", 
-                "/session continue", "/rules add", "/rules clear", "/quit"
+                "/session continue", "/session delete", "/rules add", "/rules clear", "/quit"
             ];
             
             // Find first command that starts with input but isn't exact match
@@ -158,6 +178,8 @@ impl App {
             self.is_typing = true;
             self.message_count += 1;
             self.scroll = u16::MAX; // auto-scroll to bottom
+        } else if msg.trim() == "/quit" {
+            self.should_quit = true;
         }
 
         self.input.clear();
@@ -192,7 +214,22 @@ impl App {
             Role::System
         };
         self.messages.push(ChatMessage { role, content: msg });
-        self.scroll = self.messages.len().saturating_mul(3) as u16;
+        self.scroll = u16::MAX;
+    }
+
+    pub fn load_history(&mut self, history: Vec<(String, String)>) {
+        self.messages.clear();
+        for (role_str, content) in history {
+            let role = match role_str.as_str() {
+                "user"      => Role::Player,
+                "assistant" => Role::World,
+                "system"    => Role::System,
+                _           => Role::System,
+            };
+            self.messages.push(ChatMessage { role, content });
+        }
+        self.message_count = self.messages.len();
+        self.scroll = u16::MAX;
     }
 
     pub fn get_filtered_items(&self) -> Vec<EntityInfo> {
@@ -201,6 +238,8 @@ impl App {
             PopupMode::Character => &self.available_characters,
             PopupMode::Model     => &self.available_models,
             PopupMode::Rules     => &self.available_rules,
+            PopupMode::Session   => &self.available_sessions,
+            PopupMode::Commands  => &self.available_commands,
             _                    => return Vec::new(),
         };
 
