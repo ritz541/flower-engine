@@ -1,1 +1,22 @@
-/target
+# Core
+config.yaml
+.env
+engine.db*
+engine.log
+chroma_db/
+lore_notes/
+test_lore.txt
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+env/
+.pytest_cache/
+
+# Rust
+tui/target/
+tui/Cargo.lock
+
+# OS
+.DS_Store

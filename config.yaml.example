@@ -1,0 +1,21 @@
+# Engine Configuration
+# Copy this file to config.yaml and fill in your real keys.
+# config.yaml is gitignored and should NEVER be committed.
+
+# Database Storage Path (Relative to execution directory)
+database_path: "./chroma_db"
+
+# LLM Providers - replace with your actual API keys
+openai_base_url: "https://openrouter.ai/api/v1"
+openai_api_key: "sk-or-v1-REPLACE_WITH_YOUR_OPENROUTER_KEY"
+
+deepseek_api_key: "sk-REPLACE_WITH_YOUR_DEEPSEEK_KEY"
+
+# Supported Models List (The TUI will receive these on Handshake)
+default_model: "google/gemini-2.0-pro-exp-02-05:free"
+supported_models:
+  - "google/gemini-2.0-pro-exp-02-05:free"
+  - "openai/gpt-4o-mini"
+  - "anthropic/claude-3-haiku"
+  - "deepseek-chat"
+  - "deepseek-reasoner"
