@@ -56,6 +56,7 @@ pub struct App {
     pub available_models: Vec<EntityInfo>,
     pub available_rules: Vec<EntityInfo>,
     pub active_rules: Vec<String>,
+    pub command_hint: String,
 }
 
 impl App {
@@ -89,18 +90,46 @@ impl App {
             available_models: Vec::new(),
             available_rules: Vec::new(),
             active_rules: Vec::new(),
+            command_hint: String::new(),
         }
     }
 
     pub fn handle_char(&mut self, c: char) {
         if !self.is_typing {
             self.input.push(c);
+            self.update_command_hint();
         }
     }
 
     pub fn handle_backspace(&mut self) {
         if !self.is_typing {
             self.input.pop();
+            self.update_command_hint();
+        }
+    }
+
+    fn update_command_hint(&mut self) {
+        if self.input.starts_with('/') {
+            let cmds = [
+                "/world select", "/world sync_folder", "/world attach_lore",
+                "/character select", "/model", "/session new", 
+                "/session continue", "/rules add", "/rules clear", "/quit"
+            ];
+            
+            // Find first command that starts with input but isn't exact match
+            self.command_hint = cmds.iter()
+                .find(|&&c| c.starts_with(&self.input) && c != self.input)
+                .map(|&c| c[self.input.len()..].to_string())
+                .unwrap_or_default();
+        } else {
+            self.command_hint.clear();
+        }
+    }
+
+    pub fn apply_hint(&mut self) {
+        if !self.command_hint.is_empty() {
+            self.input.push_str(&self.command_hint);
+            self.command_hint.clear();
         }
     }
 

@@ -208,9 +208,17 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         } else {
             Span::styled(app.input.clone(), Style::default().fg(Color::White))
         };
+
+        let hint_span = if !app.command_hint.is_empty() {
+            Span::styled(app.command_hint.clone(), Style::default().fg(Color::Indexed(237)))
+        } else {
+            Span::raw("")
+        };
+
         Line::from(vec![
             Span::styled("  › ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
             input_text,
+            hint_span,
             Span::styled(cursor, Style::default().fg(COLOR_AI)),
         ])
     };
@@ -218,8 +226,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     // ── COMMAND POPUP ─────────────────────────────────────────────────────
     if app.show_popup {
-        let area = centered_rect(60, 40, f.size());
-        f.render_widget(Clear, area);
+        let popup_height = 10;
+        let popup_area = Rect::new(
+            root[1].x + 2,
+            root[1].y + root[1].height.saturating_sub(popup_height),
+            root[1].width.saturating_sub(4),
+            popup_height.min(root[1].height),
+        );
+        f.render_widget(Clear, popup_area);
 
         let popup_title = match app.popup_mode {
             PopupMode::World     => " WORLD ",
@@ -235,12 +249,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             .title(Span::styled(popup_title, Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)))
             .padding(Padding::horizontal(1));
         
+        let inner_area = block.inner(popup_area);
+        f.render_widget(block, popup_area);
+        
         let popup_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(2), Constraint::Min(1)])
-            .split(block.inner(area));
-        
-        f.render_widget(block, area);
+            .constraints([Constraint::Length(1), Constraint::Min(1)])
+            .split(inner_area);
 
         // Search Bar
         let search_cursor = if app.cursor_state { "▋" } else { " " };

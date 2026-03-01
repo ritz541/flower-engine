@@ -132,6 +132,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                         if app.is_typing {
                             // Cancel the active stream
                             let _ = tx_out.send("/cancel".to_string());
+                            app.is_typing = false;
                         } else if app.show_popup {
                             app.show_popup = false;
                             app.popup_mode = app::PopupMode::None;
@@ -139,6 +140,9 @@ async fn run_app<B: ratatui::backend::Backend>(
                         } else {
                             app.should_quit = true;
                         }
+                    }
+                    KeyCode::Tab => {
+                        app.apply_hint();
                     }
                     KeyCode::Enter => {
                         if app.show_popup {
