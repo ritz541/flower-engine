@@ -4,7 +4,7 @@ mod ui;
 mod ws;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -126,110 +126,127 @@ async fn run_app<B: ratatui::backend::Backend>(
             .unwrap_or_else(|| Duration::from_secs(0));
             
         if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Esc => {
-                        if app.is_typing {
-                            // Cancel the active stream
-                            let _ = tx_out.send("/cancel".to_string());
-                            app.is_typing = false;
-                        } else if app.show_popup {
-                            app.show_popup = false;
-                            app.popup_mode = app::PopupMode::None;
-                            app.input.clear();
-                        } else {
-                            app.should_quit = true;
+            match event::read()? {
+                Event::Mouse(mouse) => {
+                    match mouse.kind {
+                        MouseEventKind::ScrollUp => {
+                            app.scroll = app.scroll.saturating_sub(2);
                         }
-                    }
-                    KeyCode::Tab => {
-                        app.apply_hint();
-                    }
-                    KeyCode::Enter => {
-                        if app.show_popup {
-                            // --- Popup Selection Confirmed ---
-                            let filtered = app.get_filtered_items();
-                            let prefix = match app.popup_mode {
-                                app::PopupMode::World     => "/world select",
-                                app::PopupMode::Character => "/character select",
-                                app::PopupMode::Model     => "/model",
-                                app::PopupMode::Rules     => "/rules add",
-                                _                         => "",
-                            };
-                            
-                            if !filtered.is_empty() && app.selected_index < filtered.len() {
-                                let selection = &filtered[app.selected_index];
-                                let cmd = format!("{} {}", prefix, selection.id);
-                                let _ = tx_out.send(cmd);
-                            }
-                            
-                            app.show_popup = false;
-                            app.popup_mode = app::PopupMode::None;
-                            app.popup_search_query.clear();
-                            app.input.clear();
-                            
-                        } else if let Some(msg) = app.submit_message() {
-                            let _ = tx_out.send(msg);
+                        MouseEventKind::ScrollDown => {
+                            app.scroll = app.scroll.saturating_add(2);
                         }
+                        _ => {}
                     }
-                    KeyCode::Char(c) => {
-                        if app.show_popup {
-                            app.popup_search_query.push(c);
-                            app.selected_index = 0; // Reset index when searching
-                        } else {
-                            app.handle_char(c);
-                            
-                            // --- Trigger Popup on exact string match ---
-                            if app.input == "/world " && !app.available_worlds.is_empty() {
-                                app.show_popup = true;
-                                app.popup_mode = app::PopupMode::World;
-                                app.selected_index = 0;
-                            } else if app.input == "/character " && !app.available_characters.is_empty() {
-                                app.show_popup = true;
-                                app.popup_mode = app::PopupMode::Character;
-                                app.selected_index = 0;
-                            } else if app.input == "/model " && !app.available_models.is_empty() {
-                                app.show_popup = true;
-                                app.popup_mode = app::PopupMode::Model;
-                                app.selected_index = 0;
-                            } else if app.input == "/rules " && !app.available_rules.is_empty() {
-                                app.show_popup = true;
-                                app.popup_mode = app::PopupMode::Rules;
-                                app.selected_index = 0;
-                            }
-                        }
-                    }
-                    KeyCode::Backspace => {
-                        if app.show_popup {
-                            app.popup_search_query.pop();
-                        } else {
-                            app.handle_backspace();
-                        }
-                    }
-                    KeyCode::Up => {
-                        if app.show_popup {
-                            app.selected_index = app.selected_index.saturating_sub(1);
-                        } else {
-                            app.scroll = app.scroll.saturating_sub(1);
-                        }
-                    }
-                    KeyCode::Down => {
-                        if app.show_popup {
-                            let max = app.get_filtered_items().len().saturating_sub(1);
-                            if app.selected_index < max {
-                                app.selected_index += 1;
-                            }
-                        } else {
-                            app.scroll = app.scroll.saturating_add(1);
-                        }
-                    }
-                    _ => {}
                 }
+                Event::Key(key) => {
+                    match key.code {
+                        KeyCode::Esc => {
+                            if app.is_typing {
+                                // Cancel the active stream
+                                let _ = tx_out.send("/cancel".to_string());
+                                app.is_typing = false;
+                            } else if app.show_popup {
+                                app.show_popup = false;
+                                app.popup_mode = app::PopupMode::None;
+                                app.input.clear();
+                            } else {
+                                app.should_quit = true;
+                            }
+                        }
+                        KeyCode::Tab => {
+                            app.apply_hint();
+                        }
+                        KeyCode::Enter => {
+                            if app.show_popup {
+                                // --- Popup Selection Confirmed ---
+                                let filtered = app.get_filtered_items();
+                                let prefix = match app.popup_mode {
+                                    app::PopupMode::World     => "/world select",
+                                    app::PopupMode::Character => "/character select",
+                                    app::PopupMode::Model     => "/model",
+                                    app::PopupMode::Rules     => "/rules add",
+                                    _                         => "",
+                                };
+                                
+                                if !filtered.is_empty() && app.selected_index < filtered.len() {
+                                    let selection = &filtered[app.selected_index];
+                                    let cmd = format!("{} {}", prefix, selection.id);
+                                    let _ = tx_out.send(cmd);
+                                }
+                                
+                                app.show_popup = false;
+                                app.popup_mode = app::PopupMode::None;
+                                app.popup_search_query.clear();
+                                app.input.clear();
+                                
+                            } else if let Some(msg) = app.submit_message() {
+                                let _ = tx_out.send(msg);
+                            }
+                        }
+                        KeyCode::Char(c) => {
+                            if app.show_popup {
+                                app.popup_search_query.push(c);
+                                app.set_popup_index(0); // Reset index when searching
+                            } else {
+                                app.handle_char(c);
+                                
+                                // --- Trigger Popup on exact string match ---
+                                let trigger = if app.input == "/world " && !app.available_worlds.is_empty() {
+                                    Some(app::PopupMode::World)
+                                } else if app.input == "/character " && !app.available_characters.is_empty() {
+                                    Some(app::PopupMode::Character)
+                                } else if app.input == "/model " && !app.available_models.is_empty() {
+                                    Some(app::PopupMode::Model)
+                                } else if app.input == "/rules " && !app.available_rules.is_empty() {
+                                    Some(app::PopupMode::Rules)
+                                } else {
+                                    None
+                                };
+
+                                if let Some(mode) = trigger {
+                                    app.show_popup = true;
+                                    app.popup_mode = mode;
+                                    app.set_popup_index(0);
+                                }
+                            }
+                        }
+                        KeyCode::Backspace => {
+                            if app.show_popup {
+                                app.popup_search_query.pop();
+                                app.set_popup_index(0);
+                            } else {
+                                app.handle_backspace();
+                            }
+                        }
+                        KeyCode::Up => {
+                            if app.show_popup {
+                                let new_idx = app.selected_index.saturating_sub(1);
+                                app.set_popup_index(new_idx);
+                            } else {
+                                app.scroll = app.scroll.saturating_sub(1);
+                            }
+                        }
+                        KeyCode::Down => {
+                            if app.show_popup {
+                                let max = app.get_filtered_items().len().saturating_sub(1);
+                                if app.selected_index < max {
+                                    let new_idx = app.selected_index + 1;
+                                    app.set_popup_index(new_idx);
+                                }
+                            } else {
+                                app.scroll = app.scroll.saturating_add(1);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
             }
         }
         
         // --- TICK UPDATE (cursor blink + spinner) ---
         if last_tick.elapsed() >= TICK_RATE {
-            app.cursor_state = !app.cursor_state;
+            // app.cursor_state = !app.cursor_state; // BLINK DISABLED
             if app.is_typing {
                 app.spinner_frame = (app.spinner_frame + 1) % 10;
             }

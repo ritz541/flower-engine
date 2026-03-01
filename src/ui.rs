@@ -1,8 +1,8 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, Padding, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Padding, Paragraph},
     Frame,
 };
 
@@ -74,14 +74,19 @@ fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     // ── Root layout ────────────────────────────────────────────────────────
+    let mut constraints = vec![
+        Constraint::Length(1), // Header
+        Constraint::Min(1),    // Content
+        Constraint::Length(1), // Divider/Status
+        Constraint::Length(1), // Input
+    ];
+    if app.show_popup {
+        constraints.push(Constraint::Length(6)); // Suggestions Area
+    }
+
     let root = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(1), // Header
-            Constraint::Min(1),    // Content
-            Constraint::Length(1), // Divider/Status
-            Constraint::Length(1), // Input
-        ])
+        .constraints(constraints)
         .split(f.size());
 
     // ── HEADER ─────────────────────────────────────────────────────────────
@@ -101,8 +106,24 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         root[0]
     );
 
+    // ── MIDDLE: SIDEBAR │ CHAT ───────────────────────────────────────────
+    let content_area = root[1];
+    let middle = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Min(1),     // Chat
+            Constraint::Length(24), // Sidebar
+        ])
+        .split(content_area);
+
+    let chat_area = middle[0];
+    let sidebar_area = middle[1];
+
+    // Background for chat
+    f.render_widget(Block::default().bg(Color::Indexed(234)), chat_area);
+
     // ── CHAT CONTENT ───────────────────────────────────────────────────────
-    let chat_pane_width = root[1].width.saturating_sub(4) as usize; // padding
+    let chat_pane_width = chat_area.width.saturating_sub(4) as usize; 
     let indent_width = 4usize;
     let body_width = chat_pane_width.saturating_sub(indent_width).max(20);
 
@@ -172,7 +193,36 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Paragraph::new(chat_lines)
             .block(Block::default().padding(Padding::horizontal(2)))
             .scroll((safe_scroll, 0)),
-        root[1]
+        chat_area
+    );
+
+    // ── SIDEBAR ────────────────────────────────────────────────────────────
+    let mut sidebar_lines = vec![
+        Line::from(""),
+        Line::from(Span::styled(" STATUS", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(format!("  {} ", app.status), Style::default().fg(COLOR_AI))),
+        Line::from(""),
+        Line::from(Span::styled(" WORLD", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(format!("  {} ", app.world_id), Style::default().fg(Color::White))),
+        Line::from(""),
+        Line::from(Span::styled(" CHARACTER", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(format!("  {} ", app.character_id), Style::default().fg(Color::White))),
+        Line::from(""),
+        Line::from(Span::styled(" ACTIVE RULES", Style::default().fg(Color::Indexed(240)).add_modifier(Modifier::BOLD))),
+    ];
+
+    if app.active_rules.is_empty() {
+        sidebar_lines.push(Line::from(Span::styled("  (none)", Style::default().fg(Color::Indexed(237)))));
+    } else {
+        for rule in &app.active_rules {
+            sidebar_lines.push(Line::from(Span::styled(format!("  • {} ", rule), Style::default().fg(COLOR_ACCENT))));
+        }
+    }
+
+    f.render_widget(
+        Paragraph::new(sidebar_lines)
+            .block(Block::default().borders(Borders::LEFT).border_style(Style::default().fg(Color::Indexed(236)))),
+        sidebar_area
     );
 
     // ── STATUS / DIVIDER ──────────────────────────────────────────────────
@@ -195,7 +245,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     f.render_widget(Paragraph::new(status_line), root[2]);
 
     // ── INPUT BAR ─────────────────────────────────────────────────────────
-    let cursor = if app.cursor_state { "▋" } else { " " };
+    let cursor = "█"; // STEADY BOX CURSOR
     let prompt = if app.is_typing {
         Line::from(vec![
             Span::styled("  ✦ ", Style::default().fg(COLOR_AI)),
@@ -224,17 +274,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     };
     f.render_widget(Paragraph::new(prompt), root[3]);
 
-    // ── COMMAND POPUP ─────────────────────────────────────────────────────
+    // ── COMMAND SUGGESTIONS (UNDER INPUT) ─────────────────────────────────
     if app.show_popup {
-        let popup_height = 10;
-        let popup_area = Rect::new(
-            root[1].x + 2,
-            root[1].y + root[1].height.saturating_sub(popup_height),
-            root[1].width.saturating_sub(4),
-            popup_height.min(root[1].height),
-        );
-        f.render_widget(Clear, popup_area);
-
+        let area = root[4];
+        
         let popup_title = match app.popup_mode {
             PopupMode::World     => " WORLD ",
             PopupMode::Character => " CHARACTER ",
@@ -244,48 +287,27 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         };
 
         let block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Indexed(239)))
-            .title(Span::styled(popup_title, Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)))
-            .padding(Padding::horizontal(1));
+            .borders(Borders::TOP)
+            .border_style(Style::default().fg(Color::Indexed(237)))
+            .title(Span::styled(format!(" {} ", popup_title), Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)))
+            .padding(Padding::horizontal(2));
         
-        let inner_area = block.inner(popup_area);
-        f.render_widget(block, popup_area);
-        
-        let popup_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(1)])
-            .split(inner_area);
+        let inner_area = block.inner(area);
+        f.render_widget(block, area);
 
-        // Search Bar
-        let search_cursor = if app.cursor_state { "▋" } else { " " };
-        let search_text = if app.popup_search_query.is_empty() {
-            Span::styled("Search...", Style::default().fg(Color::Indexed(239)))
-        } else {
-            Span::styled(app.popup_search_query.clone(), Style::default().fg(Color::White))
-        };
-        f.render_widget(
-            Paragraph::new(Line::from(vec![
-                Span::styled(" 🔍 ", Style::default().fg(Color::Indexed(240))),
-                search_text,
-                Span::styled(search_cursor, Style::default().fg(COLOR_AI)),
-            ])),
-            popup_layout[0]
-        );
-
-        // Results
         let items = app.get_filtered_items();
         let list_items: Vec<ListItem> = if items.is_empty() {
-            vec![ListItem::new("   No results found").style(Style::default().fg(Color::Indexed(239)))]
+            vec![ListItem::new("   No matches found").style(Style::default().fg(Color::Indexed(239)))]
         } else {
             items.iter().enumerate().map(|(i, entity)| {
-                let content = if i == app.selected_index {
+                let is_selected = i == app.selected_index;
+                let content = if is_selected {
                     format!(" ❯ {}  ", entity.name)
                 } else {
                     format!("   {}  ", entity.name)
                 };
-                let style = if i == app.selected_index {
-                    Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD).bg(Color::Indexed(236))
+                let style = if is_selected {
+                    Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(Color::Indexed(244))
                 };
@@ -293,6 +315,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             }).collect()
         };
 
-        f.render_widget(List::new(list_items), popup_layout[1]);
+        f.render_stateful_widget(
+            List::new(list_items).highlight_style(Style::default().bg(Color::Indexed(236))),
+            inner_area,
+            &mut app.popup_state
+        );
     }
 }

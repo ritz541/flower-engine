@@ -1,5 +1,6 @@
 use std::time::Instant;
 use crate::models::EntityInfo;
+use ratatui::widgets::ListState;
 
 #[derive(Clone, PartialEq)]
 pub enum Role {
@@ -50,6 +51,7 @@ pub struct App {
     pub show_popup: bool,
     pub popup_mode: PopupMode,
     pub selected_index: usize,
+    pub popup_state: ListState,
     pub popup_search_query: String,
     pub available_worlds: Vec<EntityInfo>,
     pub available_characters: Vec<EntityInfo>,
@@ -61,6 +63,9 @@ pub struct App {
 
 impl App {
     pub fn new() -> App {
+        let mut popup_state = ListState::default();
+        popup_state.select(Some(0));
+        
         App {
             messages: Vec::new(),
             current_streaming_message: String::new(),
@@ -84,6 +89,7 @@ impl App {
             show_popup: false,
             popup_mode: PopupMode::None,
             selected_index: 0,
+            popup_state,
             popup_search_query: String::new(),
             available_worlds: Vec::new(),
             available_characters: Vec::new(),
@@ -92,6 +98,11 @@ impl App {
             active_rules: Vec::new(),
             command_hint: String::new(),
         }
+    }
+
+    pub fn set_popup_index(&mut self, index: usize) {
+        self.selected_index = index;
+        self.popup_state.select(Some(index));
     }
 
     pub fn handle_char(&mut self, c: char) {
