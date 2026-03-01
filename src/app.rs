@@ -44,6 +44,8 @@ pub struct App {
     pub spinner_frame: usize,
     pub tps: f64,
     pub active_model: String,
+    pub active_prompt_price: f64,
+    pub active_completion_price: f64,
 
     // Stats
     pub message_count: usize,
@@ -87,6 +89,8 @@ impl App {
             spinner_frame: 0,
             tps: 0.0,
             active_model: "Unknown".to_string(),
+            active_prompt_price: 0.0,
+            active_completion_price: 0.0,
 
             message_count: 0,
             total_tokens: 0,
@@ -162,6 +166,17 @@ impl App {
             self.input.push_str(&self.command_hint);
             self.command_hint.clear();
         }
+    }
+
+    pub fn submit_command_direct(&mut self, cmd: String) -> Option<String> {
+        if cmd == "/quit" {
+            self.should_quit = true;
+            return None;
+        }
+        if cmd == "/session new" {
+            // handle any local reset if needed
+        }
+        Some(cmd)
     }
 
     pub fn submit_message(&mut self) -> Option<String> {
@@ -255,8 +270,8 @@ impl App {
     }
 
     pub fn estimated_cost(&self) -> f64 {
-        // Rough estimate: ~$0.50 per 1M tokens
-        (self.total_tokens as f64 / 1_000_000.0) * 0.50
+        // Calculation based on per 1M tokens pricing
+        (self.total_tokens as f64 / 1_000_000.0) * self.active_completion_price
     }
 
     pub fn session_elapsed(&self) -> String {

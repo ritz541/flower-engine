@@ -106,7 +106,14 @@ async fn run_app<B: ratatui::backend::Backend>(
                     "chat_chunk" => {
                         app.append_chunk(&msg.payload.content);
                         if let Some(tps) = msg.payload.metadata.tokens_per_second { app.tps = tps; }
-                        if let Some(model) = msg.payload.metadata.model { app.active_model = model; }
+                        if let Some(model) = msg.payload.metadata.model { 
+                            app.active_model = model.clone();
+                            // Update prices for current model
+                            if let Some(info) = app.available_models.iter().find(|m| m.id == model) {
+                                app.active_prompt_price = info.prompt_price;
+                                app.active_completion_price = info.completion_price;
+                            }
+                        }
                     }
                     "chat_end" => {
                         if let Some(total) = msg.payload.metadata.total_tokens { app.total_tokens += total; }
@@ -151,10 +158,36 @@ async fn run_app<B: ratatui::backend::Backend>(
                                     if app.popup_mode == app::PopupMode::Commands {
                                         if !filtered.is_empty() && app.selected_index < filtered.len() {
                                             let selection = &filtered[app.selected_index];
-                                            app.input = selection.id.clone();
+                                            let cmd = selection.id.clone();
+
+                                            // Handle "complete" commands immediately
+                                            if !cmd.ends_with(' ') {
+                                                if let Some(final_cmd) = app.submit_command_direct(cmd) {
+                                                    let _ = tx_out.send(final_cmd);
+                                                }
+                                                app.show_popup = false;
+                                                app.popup_mode = app::PopupMode::None;
+                                            } else {
+                                                // Prefix commands: populate input and chain the next popup
+                                                app.input = cmd.clone();
+                                                app.popup_search_query.clear();
+
+                                                let next_mode = if cmd.contains("/world select") { Some(app::PopupMode::World) }
+                                                else if cmd.contains("/character select") { Some(app::PopupMode::Character) }
+                                                else if cmd.contains("/model") { Some(app::PopupMode::Model) }
+                                                else if cmd.contains("/rules add") { Some(app::PopupMode::Rules) }
+                                                else if cmd.contains("/session continue") || cmd.contains("/session delete") { Some(app::PopupMode::Session) }
+                                                else { None };
+
+                                                if let Some(mode) = next_mode {
+                                                    app.popup_mode = mode;
+                                                    app.set_popup_index(0);
+                                                } else {
+                                                    app.show_popup = false;
+                                                    app.popup_mode = app::PopupMode::None;
+                                                }
+                                            }
                                         }
-                                        app.show_popup = false;
-                                        app.popup_mode = app::PopupMode::None;
                                         app.popup_search_query.clear();
                                     } else {
                                         let prefix = match app.popup_mode {

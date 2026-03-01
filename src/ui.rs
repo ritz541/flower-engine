@@ -248,10 +248,16 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Span::styled("Narrating...", Style::default().fg(Color::Indexed(236)).add_modifier(Modifier::ITALIC)),
         ])
     } else {
-        let input_text = if app.input.is_empty() {
-            Span::styled("How do you respond? (/ for commands)", Style::default().fg(Color::Indexed(236)))
+        let (input_span, cursor_after) = if app.input.is_empty() {
+            (
+                Span::styled("How do you respond? (/ for commands)", Style::default().fg(Color::Indexed(236))),
+                false
+            )
         } else {
-            Span::styled(app.input.clone(), Style::default().fg(Color::White))
+            (
+                Span::styled(app.input.clone(), Style::default().fg(Color::White)),
+                true
+            )
         };
 
         let hint_span = if !app.command_hint.is_empty() {
@@ -260,12 +266,21 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Span::raw("")
         };
 
-        Line::from(vec![
-            Span::styled("  › ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
-            input_text,
-            hint_span,
-            Span::styled(cursor, Style::default().fg(COLOR_AI)),
-        ])
+        if cursor_after {
+            Line::from(vec![
+                Span::styled("  › ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
+                input_span,
+                Span::styled(cursor, Style::default().fg(COLOR_AI)),
+                hint_span,
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled("  › ", Style::default().fg(COLOR_AI).add_modifier(Modifier::BOLD)),
+                Span::styled(cursor, Style::default().fg(COLOR_AI)),
+                input_span,
+                hint_span,
+            ])
+        }
     };
     
     f.render_widget(
