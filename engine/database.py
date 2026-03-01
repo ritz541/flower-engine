@@ -8,6 +8,7 @@ class World(BaseModel):
     id: str
     name: str
     lore: str
+    start_message: str = ""
 
 class Character(BaseModel):
     id: str
@@ -40,9 +41,15 @@ def init_db():
             CREATE TABLE IF NOT EXISTS worlds (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
-                lore TEXT NOT NULL
+                lore TEXT NOT NULL,
+                start_message TEXT NOT NULL DEFAULT ''
             )
         ''')
+        # Migration: Add start_message if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE worlds ADD COLUMN start_message TEXT NOT NULL DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass # Column already exists
         # Migration: Add system_prompt if it doesn't exist
         try:
             cursor.execute("ALTER TABLE worlds ADD COLUMN system_prompt TEXT NOT NULL DEFAULT ''")
@@ -90,23 +97,23 @@ class WorldManager:
     def add_world(self, world: World):
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO worlds (id, name, lore) VALUES (?, ?, ?)",
-                (world.id, world.name, world.lore)
+                "INSERT OR REPLACE INTO worlds (id, name, lore, start_message) VALUES (?, ?, ?, ?)",
+                (world.id, world.name, world.lore, world.start_message)
             )
             conn.commit()
             
     def get_world(self, world_id: str) -> Optional[World]:
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("SELECT id, name, lore FROM worlds WHERE id = ?", (world_id,))
+            cursor = conn.execute("SELECT id, name, lore, start_message FROM worlds WHERE id = ?", (world_id,))
             row = cursor.fetchone()
             if row:
-                return World(id=row[0], name=row[1], lore=row[2])
+                return World(id=row[0], name=row[1], lore=row[2], start_message=row[3])
             return None
             
     def get_all_worlds(self) -> List[World]:
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("SELECT id, name, lore FROM worlds")
-            return [World(id=row[0], name=row[1], lore=row[2]) for row in cursor.fetchall()]
+            cursor = conn.execute("SELECT id, name, lore, start_message FROM worlds")
+            return [World(id=row[0], name=row[1], lore=row[2], start_message=row[3]) for row in cursor.fetchall()]
 
 class CharacterManager:
     def __init__(self, db_path: str = DB_NAME):

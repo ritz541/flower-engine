@@ -6,7 +6,7 @@ import yaml
 from fastapi import WebSocket
 from openai import AsyncOpenAI
 from engine.logger import log
-from engine.config import OPENAI_BASE_URL, OPENAI_API_KEY, DEEPSEEK_API_KEY
+from engine.config import OPENAI_BASE_URL, OPENAI_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY, GROQ_BASE_URL
 from engine.database import char_manager, world_manager, msg_manager, session_manager, Message
 from engine.rag import rag_manager
 from engine.prompt import build_system_prompt
@@ -27,6 +27,12 @@ client = AsyncOpenAI(
 ds_client = AsyncOpenAI(
     base_url="https://api.deepseek.com",
     api_key=DEEPSEEK_API_KEY
+)
+
+# Groq Client
+groq_client = AsyncOpenAI(
+    base_url=GROQ_BASE_URL,
+    api_key=GROQ_API_KEY
 )
 
 async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_id: str, char_id: str, session_id: str = ""):
@@ -75,7 +81,12 @@ async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_i
     total_tokens = 0
 
     try:
-        active_client = ds_client if state.CURRENT_MODEL.startswith("deepseek-") else client
+        if state.CURRENT_MODEL.startswith("deepseek-"):
+            active_client = ds_client
+        elif state.CURRENT_MODEL.startswith("groq/") or any(x in state.CURRENT_MODEL.lower() for x in ["llama-", "mixtral-", "gemma-"]) and not "/" in state.CURRENT_MODEL:
+            active_client = groq_client
+        else:
+            active_client = client # Default to OpenRouter
         response = await active_client.chat.completions.create(
             model=state.CURRENT_MODEL,
             messages=messages,

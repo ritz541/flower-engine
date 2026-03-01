@@ -19,7 +19,12 @@ app = FastAPI(title="The Flower Engine")
 async def startup():
     # Load Assets
     for data in load_yaml_assets("worlds/*.yaml"):
-        w = World(id=data["id"], name=data["name"], lore=data.get("lore", ""))
+        w = World(
+            id=data["id"], 
+            name=data["name"], 
+            lore=data.get("lore", ""),
+            start_message=data.get("start_message", "")
+        )
         world_manager.add_world(w)
         state.available_worlds.append({"id": w.id, "name": w.name})
         if w.lore: rag_manager.add_lore(w.id, "base_lore", w.lore)
@@ -47,6 +52,22 @@ async def startup():
                         "completion_price": round(float(p.get("completion", 0)) * 1e6, 4)
                     })
     except Exception as e: log.error(f"Model fetch failed: {e}")
+    
+    # Fetch Groq Models
+    log.info("Fetching Groq models...")
+    from engine.config import GROQ_API_KEY, GROQ_BASE_URL
+    try:
+        async with httpx.AsyncClient() as hc:
+            headers = {"Authorization": f"Bearer {GROQ_API_KEY}"} if GROQ_API_KEY else {}
+            resp = await hc.get(f"{GROQ_BASE_URL}/models", headers=headers)
+            if resp.status_code == 200:
+                for m in resp.json().get("data", []):
+                    state.AVAILABLE_MODELS.append({
+                        "id": m["id"], "name": f"Groq: {m['id']}",
+                        "prompt_price": 0.0, "completion_price": 0.0 # Groq prices vary, usually cheap/free for some tiers
+                    })
+    except Exception as e: log.error(f"Groq model fetch failed: {e}")
+
     state.AVAILABLE_MODELS.append({"id": "deepseek-chat", "name": "DeepSeek Chat", "prompt_price": 0.14, "completion_price": 0.28})
     state.AVAILABLE_MODELS.append({"id": "deepseek-reasoner", "name": "DeepSeek Reasoner", "prompt_price": 0.55, "completion_price": 2.19})
 

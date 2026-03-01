@@ -67,7 +67,20 @@ async def handle_command(cmd_str: str, websocket: WebSocket):
             else:
                 state.ACTIVE_SESSION_ID = uuid.uuid4().hex[:12]
                 session_manager.create_session(state.ACTIVE_SESSION_ID, state.ACTIVE_CHARACTER_ID, state.ACTIVE_WORLD_ID, state.CURRENT_MODEL)
+                
+                # Check for Start Message
+                world = world_manager.get_world(state.ACTIVE_WORLD_ID)
+                if world and world.start_message:
+                    msg_manager.add_message(Message(
+                        role="assistant", 
+                        content=world.start_message, 
+                        character_id=state.ACTIVE_CHARACTER_ID, 
+                        session_id=state.ACTIVE_SESSION_ID
+                    ))
+                
                 await websocket.send_text(build_ws_payload("system_update", f"✓ New session: {state.ACTIVE_SESSION_ID}"))
+                from engine.handlers import send_chat_history
+                await send_chat_history(websocket, state.ACTIVE_CHARACTER_ID, state.ACTIVE_SESSION_ID)
                 await broadcast_sync_state(websocket)
         elif len(parts) >= 3 and parts[1] == "continue":
             sess_id = parts[2].strip()
