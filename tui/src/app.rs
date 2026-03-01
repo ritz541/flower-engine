@@ -164,7 +164,8 @@ impl App {
             let cmds = [
                 "/world select", "/world sync_folder", "/world attach_lore",
                 "/character select", "/model", "/session new", 
-                "/session continue", "/session delete", "/rules add", "/rules clear", "/quit"
+                "/session continue", "/session delete", "/rules add", "/rules clear",
+                "/skills add", "/skills clear", "/module add", "/module clear", "/quit"
             ];
             
             // Find first command that starts with input but isn't exact match

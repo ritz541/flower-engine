@@ -17,21 +17,17 @@ app = FastAPI(title="The Flower Engine")
 
 @app.on_event("startup")
 async def startup():
-    # Load Assets
+    # Sync Assets to Database
     for data in load_yaml_assets("assets/worlds/*.yaml"):
         w = World(id=data["id"], name=data["name"], lore=data.get("lore", ""), start_message=data.get("start_message", ""))
         world_manager.add_world(w)
-        state.available_worlds.append({"id": w.id, "name": w.name})
         if w.lore: rag_manager.add_lore(w.id, "base_lore", w.lore)
 
     for data in load_yaml_assets("assets/characters/*.yaml"):
         c = Character(id=data["id"], name=data["name"], persona=data.get("persona", ""))
         char_manager.add_character(c)
-        state.available_characters.append({"id": c.id, "name": c.name})
 
-    state.available_rules = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("assets/rules/*.yaml")]
-    state.available_skills = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("assets/skills/*.yaml")]
-    state.available_modules = [{"id": d["id"], "name": d.get("name", d["id"])} for d in load_yaml_assets("assets/modules/*.yaml")]
+    log.info(f"Engine state initialized: {len(state.available_worlds)} worlds, {len(state.available_characters)} characters, {len(state.available_modules)} modules.")
 
     # Fetch Models
     log.info("Fetching models...")
@@ -93,6 +89,7 @@ async def websocket_endpoint(websocket: WebSocket):
             lore_list, _ = rag_manager.query_lore(state.ACTIVE_WORLD_ID, prompt, n_results=2)
             mem_key = f"{state.ACTIVE_CHARACTER_ID}_{state.ACTIVE_SESSION_ID}"
             mem_list, _ = rag_manager.query_memory(mem_key, prompt, n_results=3)
+            log.info(f"RAG: Found {len(lore_list)} lore chunks and {len(mem_list)} memory chunks.")
             full_context = f"--- LORE ---\n{chr(10).join(lore_list)}\n\n--- RECENT MEMORY ---\n{chr(10).join(mem_list)}"
 
             # Stream
@@ -100,13 +97,23 @@ async def websocket_endpoint(websocket: WebSocket):
             
             while not task.done():
                 try:
-                    raw = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
-                    if json.loads(raw).get("prompt") == "/cancel":
-                        task.cancel()
-                        await websocket.send_text(build_ws_payload("system_update", "✗ Stopped."))
-                except: pass
-            try: await task
-            except asyncio.CancelledError: pass
+                    # Check for cancellation without blocking the entire loop indefinitely
+                    raw = await asyncio.wait_for(websocket.receive_text(), timeout=0.05)
+                    try:
+                        cmd_msg = json.loads(raw)
+                        if cmd_msg.get("prompt") == "/cancel":
+                            task.cancel()
+                            await websocket.send_text(build_ws_payload("system_update", "✗ Stream cancelled by user."))
+                    except: pass
+                except asyncio.TimeoutError:
+                    continue # Task still running, no cancel message received
+            
+            try:
+                await task
+            except asyncio.CancelledError:
+                log.info("Task was successfully cancelled.")
+            except Exception as e:
+                log.error(f"Task failed with error: {e}")
 
     except WebSocketDisconnect: log.info("Disconnected.")
 

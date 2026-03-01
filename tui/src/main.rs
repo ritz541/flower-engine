@@ -79,6 +79,9 @@ async fn run_app<B: ratatui::backend::Backend>(
                         app.status = "Synced".to_string();
                         if let Some(model) = msg.payload.metadata.model { 
                             app.active_model = model.clone();
+                            if let Some(confirmed) = msg.payload.metadata.model_confirmed {
+                                app.model_confirmed = confirmed;
+                            }
                             if let Some(info) = app.available_models.iter().find(|m| m.id == model) {
                                 app.active_prompt_price = info.prompt_price;
                                 app.active_completion_price = info.completion_price;
@@ -120,6 +123,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                 app.active_completion_price = info.completion_price;
                             }
                         }
+                        if let Some(sess_id) = msg.payload.metadata.session_id { app.session_id = sess_id; }
                         if let Some(active_mods) = msg.payload.metadata.active_modules { app.active_modules = active_mods; }
                     }
                     "chat_chunk" => {
@@ -179,6 +183,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                                 }
                                                 app.show_popup = false;
                                                 app.popup_mode = app::PopupMode::None;
+                                                app.input.clear();
                                             } else {
                                                 // Prefix commands: populate input and chain the next popup
                                                 app.input = cmd.clone();

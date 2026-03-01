@@ -26,6 +26,7 @@ pub struct Payload {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Metadata {
     pub model: Option<String>,
+    pub model_confirmed: Option<bool>,
     pub tokens_per_second: Option<f64>,
     pub world_id: Option<String>,
     pub character_id: Option<String>,

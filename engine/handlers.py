@@ -15,6 +15,7 @@ async def broadcast_sync_state(ws: WebSocket):
         "State synchronized",
         {
             "model": state.CURRENT_MODEL,
+            "model_confirmed": state.MODEL_CONFIRMED,
             "world_id": state.ACTIVE_WORLD_ID,
             "character_id": state.ACTIVE_CHARACTER_ID,
             "session_id": state.ACTIVE_SESSION_ID,
@@ -25,6 +26,8 @@ async def broadcast_sync_state(ws: WebSocket):
             "active_rules": state.ACTIVE_RULES,
             "available_skills": state.available_skills,
             "active_skills": state.ACTIVE_SKILLS,
+            "available_modules": state.available_modules,
+            "active_modules": state.ACTIVE_MODULES,
             "available_sessions": recent_sessions,
         }
     ))

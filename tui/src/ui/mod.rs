@@ -64,7 +64,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .split(root[1]);
 
     let has_narrative = app.messages.iter().any(|m| m.role == Role::Player || m.role == Role::World);
-    if !has_narrative && !app.is_typing {
+    let session_active = !app.session_id.is_empty();
+
+    if !has_narrative && !session_active && !app.is_typing {
         checklist::draw(f, app, middle[0]);
     } else {
         chat::draw(f, app, middle[0]);

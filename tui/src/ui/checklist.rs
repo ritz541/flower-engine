@@ -29,7 +29,7 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
         ]));
     };
 
-    let world_done = app.world_id != "Connecting..." && app.world_id != "Unknown World" && !app.world_id.is_empty();
+    let world_done = app.world_id != "Connecting..." && !app.world_id.is_empty();
     let char_done = app.character_id != "Connecting..." && app.character_id != "Wanderer" && !app.character_id.is_empty();
     
     add_item("World", world_done, "/world select", &app.world_id);
@@ -40,6 +40,24 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
     if !app.session_id.is_empty() {
         checklist.push(Line::from(""));
         checklist.push(Line::from(Span::styled("  ✦ The stage is set. Send a message to begin.", Style::default().fg(COLOR_AI).add_modifier(Modifier::ITALIC))));
+    }
+
+    // --- MINI SYSTEM LOG ---
+    let sys_msgs: Vec<_> = app.messages.iter()
+        .filter(|m| m.role == crate::app::Role::System || m.role == crate::app::Role::Error)
+        .rev()
+        .take(2)
+        .collect();
+
+    if !sys_msgs.is_empty() {
+        checklist.push(Line::from(""));
+        for msg in sys_msgs.iter().rev() {
+            let color = if msg.role == crate::app::Role::Error { crate::ui::COLOR_ERROR } else { Color::Indexed(239) };
+            checklist.push(Line::from(vec![
+                Span::styled("  ! ", Style::default().fg(color).add_modifier(Modifier::BOLD)),
+                Span::styled(&msg.content, Style::default().fg(color)),
+            ]));
+        }
     }
 
     f.render_widget(

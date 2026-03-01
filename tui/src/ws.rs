@@ -34,7 +34,8 @@ pub async fn start_ws_client(
                             break; // Receiver dropped
                         }
                     } else {
-                        // Log or handle parse error quietly for now
+                        // Helpful for debugging contract mismatches
+                        eprintln!("Failed to parse WS message: {}", text);
                     }
                 }
                 Ok(Message::Close(_)) => break,

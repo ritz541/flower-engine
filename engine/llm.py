@@ -99,12 +99,17 @@ async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_i
     total_tokens = 0
 
     try:
+        # Provider Selection Logic
         if state.CURRENT_MODEL.startswith("deepseek-"):
             active_client = ds_client
+            log.info(f"Using DeepSeek official client for {state.CURRENT_MODEL}")
         elif state.CURRENT_MODEL.startswith("groq/") or any(x in state.CURRENT_MODEL.lower() for x in ["llama-", "mixtral-", "gemma-"]) and not "/" in state.CURRENT_MODEL:
             active_client = groq_client
+            log.info(f"Using Groq client for {state.CURRENT_MODEL}")
         else:
             active_client = client # Default to OpenRouter
+            log.info(f"Using OpenRouter client for {state.CURRENT_MODEL}")
+
         response = await active_client.chat.completions.create(
             model=state.CURRENT_MODEL,
             messages=messages,

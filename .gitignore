@@ -21,3 +21,5 @@ tui/Cargo.lock
 
 # OS
 .DS_Store
+
+arms_cache/

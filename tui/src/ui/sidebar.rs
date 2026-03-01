@@ -15,10 +15,10 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
         Line::from(Span::styled(format!("  {} ", app.status), Style::default().fg(COLOR_AI))),
         Line::from(""),
         Line::from(Span::styled(" WORLD", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format!("  {} ", app.world_id), Style::default().fg(Color::Indexed(244)))),
+        Line::from(Span::styled(format!("  {} ", app.world_id), Style::default().fg(COLOR_AI))),
         Line::from(""),
         Line::from(Span::styled(" CHARACTER", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format!("  {} ", app.character_id), Style::default().fg(Color::Indexed(244)))),
+        Line::from(Span::styled(format!("  {} ", app.character_id), Style::default().fg(COLOR_AI))),
         Line::from(""),
         Line::from(Span::styled(" SKILLS", Style::default().fg(Color::Indexed(237)).add_modifier(Modifier::BOLD))),
     ];

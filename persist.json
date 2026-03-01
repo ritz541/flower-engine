@@ -1,0 +1,1 @@
+{"world_id": "instagram", "character_id": "lilly_nsfw", "model": "deepseek-chat", "model_confirmed": true, "rules": [], "skills": ["seesorb"], "modules": ["nsfw_narration", "the_system"]}
