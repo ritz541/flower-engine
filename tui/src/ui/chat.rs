@@ -64,13 +64,23 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     let chat_height = area.height;
     let total_lines = chat_lines.len() as u16;
     let max_scroll = total_lines.saturating_sub(chat_height);
-    let safe_scroll = app.scroll.min(max_scroll);
-    app.scroll = safe_scroll;
+    // Auto-scroll to bottom when typing or streaming
+    if app.is_typing {
+        app.scroll = max_scroll;
+    } else {
+        app.scroll = app.scroll.min(max_scroll);
+    }
 
+    let effective_scroll = if app.is_typing {
+        max_scroll
+    } else {
+        app.scroll.min(max_scroll)
+    };
+    
     f.render_widget(
         Paragraph::new(chat_lines)
             .block(Block::default().padding(Padding::horizontal(2)))
-            .scroll((safe_scroll, 0)),
+            .scroll((effective_scroll, 0)),
         area
     );
 }

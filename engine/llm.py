@@ -89,10 +89,26 @@ async def stream_chat_response(ws: WebSocket, prompt: str, context: str, world_i
     if modules_block:
         system_prompt = system_prompt.replace("### THE PLAYER CHARACTER ###", f"{modules_block}\n\n### THE PLAYER CHARACTER ###")
     
+    # Get conversation history
+    history_messages = []
+    if session_id:
+        # Get recent messages for this session (limit to last 10 exchanges to avoid context overflow)
+        recent_msgs = msg_manager.get_messages(char_id, session_id, limit=20)  # 10 exchanges = 20 messages
+        for msg in recent_msgs:
+            if msg.role == "user":
+                history_messages.append({"role": "user", "content": msg.content})
+            elif msg.role == "assistant":
+                history_messages.append({"role": "assistant", "content": msg.content})
+    
     messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": prompt}
+        {"role": "system", "content": system_prompt}
     ]
+    
+    # Add conversation history
+    messages.extend(history_messages)
+    
+    # Add current user prompt
+    messages.append({"role": "user", "content": prompt})
     
     log.info(f"Initiating stream for char {char_id} in world {world_id}")
     full_content = ""

@@ -47,7 +47,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Constraint::Length(1), // Header
         Constraint::Min(1),    // Content
         Constraint::Length(1), // Divider
-        Constraint::Length(1), // Input
+        Constraint::Length(3), // Input (3 lines max for multi-line input)
     ];
     if app.show_popup { constraints.push(Constraint::Length(6)); }
 
