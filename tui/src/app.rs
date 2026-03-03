@@ -167,6 +167,12 @@ impl App {
                     completion_price: 0.0,
                 },
                 EntityInfo {
+                    id: "/nsfw".to_string(),
+                    name: "Toggle NSFW uncensored mode".to_string(),
+                    prompt_price: 0.0,
+                    completion_price: 0.0,
+                },
+                EntityInfo {
                     id: "/quit".to_string(),
                     name: "Exit the engine".to_string(),
                     prompt_price: 0.0,

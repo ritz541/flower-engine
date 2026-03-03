@@ -36,8 +36,27 @@ async def startup():
             system_prompt=data.get("system_prompt", ""),
         )
         world_manager.add_world(w)
+        
+        # Split large lore into chunks for RAG
         if w.lore:
-            rag_manager.add_lore(w.id, "base_lore", w.lore)
+            chunks = []
+            current_chunk = ""
+            chunk_size = 800  # chars per chunk
+            
+            for line in w.lore.split('\n'):
+                if len(current_chunk) + len(line) > chunk_size and current_chunk:
+                    chunks.append(current_chunk.strip())
+                    current_chunk = line + '\n'
+                else:
+                    current_chunk += line + '\n'
+            
+            if current_chunk.strip():
+                chunks.append(current_chunk.strip())
+            
+            # Add each chunk separately
+            for i, chunk in enumerate(chunks):
+                rag_manager.add_lore(w.id, f"base_lore_{i}", chunk)
+                log.info(f"Added lore chunk {i+1}/{len(chunks)} to world {w.id}")
 
     for data in load_yaml_assets("assets/characters/*.yaml"):
         c = Character(id=data["id"], name=data["name"], persona=data.get("persona", ""))
@@ -185,11 +204,20 @@ async def websocket_endpoint(websocket: WebSocket):
             )
             mem_key = f"{state.ACTIVE_CHARACTER_ID}_{state.ACTIVE_SESSION_ID}"
             mem_list, _ = rag_manager.query_memory(mem_key, prompt, n_results=3)
-            log.info(
-                f"RAG: Found {len(lore_list)} lore chunks and {len(mem_list)} memory chunks."
-            )
-            for i, chunk in enumerate(lore_list):
-                log.info(f"  [LORE CHUNK {i+1}]: {chunk[:200]}..." if len(chunk) > 200 else f"  [LORE CHUNK {i+1}]: {chunk}")
+            
+            # Log retrieved chunks with full content
+            if lore_list:
+                log.info(f"\n=== RETRIEVED LORE ({len(lore_list)} chunks) ===")
+                for i, chunk in enumerate(lore_list):
+                    log.info(f"[LORE {i+1}]\n{chunk}\n")
+                log.info(f"=== END LORE ===\n")
+            
+            if mem_list:
+                log.info(f"\n=== RETRIEVED MEMORY ({len(mem_list)} chunks) ===")
+                for i, chunk in enumerate(mem_list):
+                    log.info(f"[MEMORY {i+1}]\n{chunk}\n")
+                log.info(f"=== END MEMORY ===\n")
+            
             # Context: only recent memory (lore is in system prompt, retrieved via RAG only when asked)
             full_context = (
                 f"--- RECENT MEMORY ---\n{chr(10).join(mem_list)}" if mem_list else ""

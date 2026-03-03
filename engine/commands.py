@@ -99,6 +99,36 @@ async def handle_command(cmd_str: str, websocket: WebSocket):
             )
             await broadcast_sync_state(websocket)
 
+    elif cmd == "/nsfw":
+        # Quick toggle for NSFW mode
+        if "nsfw" not in state.ACTIVE_RULES:
+            if os.path.exists("assets/rules/nsfw.yaml"):
+                state.ACTIVE_RULES.append("nsfw")
+                state.save_state()
+                await websocket.send_text(
+                    build_ws_payload(
+                        "system_update",
+                        "✓ NSFW mode ENABLED - Unrestricted adult content",
+                        {"active_rules": state.ACTIVE_RULES},
+                    )
+                )
+                await broadcast_sync_state(websocket)
+            else:
+                await websocket.send_text(
+                    build_ws_payload("system_update", "✗ NSFW rule file not found.")
+                )
+        else:
+            state.ACTIVE_RULES.remove("nsfw")
+            state.save_state()
+            await websocket.send_text(
+                build_ws_payload(
+                    "system_update",
+                    "✓ NSFW mode DISABLED - Back to standard content",
+                    {"active_rules": state.ACTIVE_RULES},
+                )
+            )
+            await broadcast_sync_state(websocket)
+
     elif cmd == "/session":
         if len(parts) >= 2 and parts[1] == "new":
             if not state.ACTIVE_WORLD_ID or not state.ACTIVE_CHARACTER_ID:
