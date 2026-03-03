@@ -6,7 +6,7 @@ BASE_NARRATIVE_RULES = """### NARRATIVE RULES ###
 - Action First: Start with verbs. Immediately into motion.
 - Reactive Pacing: Take every detail of the player's input into consideration.
 - Visual Introductions: Provide a brief physical description of every NPC when first introduced.
-- Concise Narration: 2-4 paragraphs. Be descriptive but to the point.
+- Concise Narration: 2-4 paragraphs. Be descriptive
 - NPC Autonomy: NPCs have independent goals, priorities, and unique views.
 - Evidence Only: NPCs know only what they see and verify.
 - Time Persists: The world advances without player input.

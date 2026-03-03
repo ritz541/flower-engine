@@ -216,20 +216,22 @@ class MessageManager:
             if session_id:
                 cursor = conn.execute(
                     "SELECT id, role, content, character_id, session_id FROM messages "
-                    "WHERE session_id = ? ORDER BY id ASC LIMIT ?",
+                    "WHERE session_id = ? ORDER BY id DESC LIMIT ?",
                     (session_id, limit),
                 )
             else:
                 cursor = conn.execute(
                     "SELECT id, role, content, character_id, '' FROM messages "
-                    "WHERE character_id = ? AND session_id = '' ORDER BY id ASC LIMIT ?",
+                    "WHERE character_id = ? AND session_id = '' ORDER BY id DESC LIMIT ?",
                     (character_id, limit),
                 )
+            rows = cursor.fetchall()
+            # Return in chronological order
             return [
                 Message(
                     id=r[0], role=r[1], content=r[2], character_id=r[3], session_id=r[4]
                 )
-                for r in cursor.fetchall()
+                for r in reversed(rows)
             ]
 
     def delete_session_messages(self, session_id: str):

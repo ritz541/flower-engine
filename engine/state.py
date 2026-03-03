@@ -10,6 +10,7 @@ def save_state():
     data = {
         "world_id": ACTIVE_WORLD_ID,
         "character_id": ACTIVE_CHARACTER_ID,
+        "session_id": ACTIVE_SESSION_ID,
         "model": CURRENT_MODEL,
         "model_confirmed": MODEL_CONFIRMED,
         "rules": ACTIVE_RULES,

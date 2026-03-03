@@ -61,7 +61,7 @@ async def stream_chat_response(
     world_system_prompt = world.system_prompt if world and world.system_prompt else ""
 
     # Add scene to context only on first message
-    if world_scene and history_count == 0:
+    if world_scene and history_count <= 1:
         context = f"--- SCENE ---\n{world_scene}\n\n{context}"
 
     # Note: world_system_prompt is now passed directly to build_system_prompt, not added to context
@@ -86,13 +86,22 @@ async def stream_chat_response(
 
     history_messages = []
     if session_id:
-        # Get last 4 messages (2 exchanges) to keep context very tight
-        recent_msgs = msg_manager.get_messages(char_id, session_id, limit=4)
+        # Get last 11 messages (about 5 exchanges) to provide more context
+        # We fetch 11 because the current prompt is already in the DB
+        all_recent = msg_manager.get_messages(char_id, session_id, limit=11)
+        
+        # Filter out the current prompt to avoid double-entry in the messages list
+        # The current prompt is the last one in all_recent
+        if all_recent and all_recent[-1].content == prompt and all_recent[-1].role == "user":
+            recent_msgs = all_recent[:-1]
+        else:
+            recent_msgs = all_recent
+            
+        # Take only the last 10 messages from what remains (5 full exchanges)
+        recent_msgs = recent_msgs[-10:]
+        
         for msg in recent_msgs:
-            if msg.role == "user":
-                history_messages.append({"role": "user", "content": msg.content})
-            elif msg.role == "assistant":
-                history_messages.append({"role": "assistant", "content": msg.content})
+            history_messages.append({"role": msg.role, "content": msg.content})
 
     # Build messages: system prompt FIRST, then history, then current prompt
     messages = [{"role": "system", "content": system_prompt}]

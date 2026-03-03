@@ -113,6 +113,7 @@ async def handle_command(cmd_str: str, websocket: WebSocket):
                     state.ACTIVE_WORLD_ID,
                     state.CURRENT_MODEL,
                 )
+                state.save_state()
 
                 # Check for Start Message
                 world = world_manager.get_world(state.ACTIVE_WORLD_ID)
@@ -164,6 +165,7 @@ async def handle_command(cmd_str: str, websocket: WebSocket):
                 if sess.model:
                     state.CURRENT_MODEL = sess.model
                 session_manager.touch(sess_id)
+                state.save_state()
                 from engine.handlers import send_chat_history
 
                 await send_chat_history(
