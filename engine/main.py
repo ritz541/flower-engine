@@ -93,6 +93,29 @@ async def startup():
                     )
     except Exception as e:
         log.error(f"Groq model fetch failed: {e}")
+    # Fetch Cerebras Models
+    log.info("Fetching Cerebras models...")
+    from engine.config import CEREBRAS_API_KEY, CEREBRAS_BASE_URL
+
+    try:
+        async with httpx.AsyncClient() as hc:
+            headers = (
+                {"Authorization": f"Bearer {CEREBRAS_API_KEY}"} if CEREBRAS_API_KEY else {}
+            )
+            resp = await hc.get(f"{CEREBRAS_BASE_URL}/models", headers=headers)
+            if resp.status_code == 200:
+                for m in resp.json().get("data", []):
+                    state.AVAILABLE_MODELS.append(
+                        {
+                            "id": f"cerebras/{m['id']}",
+                            "name": f"Cerebras: {m['id']}",
+                            "prompt_price": 0.0,
+                            "completion_price": 0.0,
+                        }
+                    )
+    except Exception as e:
+        log.error(f"Cerebras model fetch failed: {e}")
+
 
     state.AVAILABLE_MODELS.append(
         {
@@ -165,6 +188,8 @@ async def websocket_endpoint(websocket: WebSocket):
             log.info(
                 f"RAG: Found {len(lore_list)} lore chunks and {len(mem_list)} memory chunks."
             )
+            for i, chunk in enumerate(lore_list):
+                log.info(f"  [LORE CHUNK {i+1}]: {chunk[:200]}..." if len(chunk) > 200 else f"  [LORE CHUNK {i+1}]: {chunk}")
             # Context: only recent memory (lore is in system prompt, retrieved via RAG only when asked)
             full_context = (
                 f"--- RECENT MEMORY ---\n{chr(10).join(mem_list)}" if mem_list else ""

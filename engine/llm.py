@@ -12,6 +12,8 @@ from engine.config import (
     DEEPSEEK_API_KEY,
     GROQ_API_KEY,
     GROQ_BASE_URL,
+    CEREBRAS_API_KEY,
+    CEREBRAS_BASE_URL,
 )
 from engine.database import (
     char_manager,
@@ -37,6 +39,7 @@ client = AsyncOpenAI(
 ds_client = AsyncOpenAI(base_url="https://api.deepseek.com", api_key=DEEPSEEK_API_KEY)
 
 groq_client = AsyncOpenAI(base_url=GROQ_BASE_URL, api_key=GROQ_API_KEY)
+cerebras_client = AsyncOpenAI(base_url=CEREBRAS_BASE_URL, api_key=CEREBRAS_API_KEY)
 
 
 async def stream_chat_response(
@@ -112,10 +115,15 @@ async def stream_chat_response(
     full_content = ""
     total_tokens = 0
 
+    model_to_use = state.CURRENT_MODEL
     try:
         if state.CURRENT_MODEL.startswith("deepseek-"):
             active_client = ds_client
             log.info(f"Using DeepSeek official client for {state.CURRENT_MODEL}")
+        elif state.CURRENT_MODEL.startswith("cerebras/"):
+            active_client = cerebras_client
+            log.info(f"Using Cerebras client for {state.CURRENT_MODEL}")
+            model_to_use = state.CURRENT_MODEL.replace("cerebras/", "")
         elif (
             state.CURRENT_MODEL.startswith("groq/")
             or any(
@@ -131,7 +139,7 @@ async def stream_chat_response(
             log.info(f"Using OpenRouter client for {state.CURRENT_MODEL}")
 
         response = await active_client.chat.completions.create(
-            model=state.CURRENT_MODEL, messages=messages, stream=True
+            model=model_to_use, messages=messages, stream=True
         )
 
         start_time = None

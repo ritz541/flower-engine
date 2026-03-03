@@ -22,3 +22,6 @@ OPENAI_API_KEY = CONFIG.get("openai_api_key", os.getenv("OPENAI_API_KEY", "dummy
 DEEPSEEK_API_KEY = CONFIG.get("deepseek_api_key", os.getenv("DEEPSEEK_API_KEY", "dummy_deepseek_key"))
 GROQ_API_KEY = CONFIG.get("groq_api_key", os.getenv("GROQ_API_KEY", "dummy_groq_key"))
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+
+CEREBRAS_API_KEY = CONFIG.get("cerebras_api_key", os.getenv("CEREBRAS_API_KEY", "dummy_cerebras_key"))
+CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
