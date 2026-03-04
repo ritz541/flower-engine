@@ -77,8 +77,12 @@ fi
 # --- Frontend Launch ---
 echo -e "  ${ROSE}✦ Entering the story...${NC}"
 cd tui
-# Small pause for dramatic effect
-sleep 1
-cargo run --quiet
+
+# Use the pre-compiled release binary if it exists, otherwise fall back to cargo run
+if [ -f "target/release/tui" ]; then
+    ./target/release/tui
+else
+    cargo run --quiet
+fi
 
 cleanup
