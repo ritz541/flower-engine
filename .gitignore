@@ -23,3 +23,4 @@ tui/Cargo.lock
 .DS_Store
 
 arms_cache/
+persist.json
