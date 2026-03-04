@@ -80,7 +80,7 @@ async def startup():
                     state.AVAILABLE_MODELS.append(
                         {
                             "id": m["id"],
-                            "name": m.get("name", m["id"]),
+                            "name": f"[OpenRouter] {m.get('name', m['id'])}",
                             "prompt_price": round(float(p.get("prompt", 0)) * 1e6, 4),
                             "completion_price": round(
                                 float(p.get("completion", 0)) * 1e6, 4
@@ -105,41 +105,36 @@ async def startup():
                     state.AVAILABLE_MODELS.append(
                         {
                             "id": m["id"],
-                            "name": f"Groq: {m['id']}",
+                            "name": f"[Groq] {m['id']}",
                             "prompt_price": 0.0,
                             "completion_price": 0.0,  # Groq prices vary, usually cheap/free for some tiers
                         }
                     )
     except Exception as e:
         log.error(f"Groq model fetch failed: {e}")
-    # Fetch Cerebras Models
-    log.info("Fetching Cerebras models...")
-    from engine.config import CEREBRAS_API_KEY, CEREBRAS_BASE_URL
 
-    try:
-        async with httpx.AsyncClient() as hc:
-            headers = (
-                {"Authorization": f"Bearer {CEREBRAS_API_KEY}"} if CEREBRAS_API_KEY else {}
-            )
-            resp = await hc.get(f"{CEREBRAS_BASE_URL}/models", headers=headers)
-            if resp.status_code == 200:
-                for m in resp.json().get("data", []):
-                    state.AVAILABLE_MODELS.append(
-                        {
-                            "id": f"cerebras/{m['id']}",
-                            "name": f"Cerebras: {m['id']}",
-                            "prompt_price": 0.0,
-                            "completion_price": 0.0,
-                        }
-                    )
-    except Exception as e:
-        log.error(f"Cerebras model fetch failed: {e}")
-
+    # Fetch Official Gemini Models
+    log.info("Fetching official Gemini models...")
+    from engine.config import GEMINI_API_KEY
+    
+    # We always show these so users know they are supported
+    gemini_list = [
+        {"id": "gemini/gemini-3.1-pro-preview", "name": "[Gemini] Gemini 3.1 Pro"},
+        {"id": "gemini/gemini-3-flash-preview", "name": "[Gemini] Gemini 3 Flash"},
+        {"id": "gemini/gemini-3.1-flash-lite-preview", "name": "[Gemini] Gemini 3.1 Flash-Lite"},
+    ]
+    for m in gemini_list:
+        state.AVAILABLE_MODELS.append({
+            "id": m["id"],
+            "name": m["name"],
+            "prompt_price": 0.0, 
+            "completion_price": 0.0,
+        })
 
     state.AVAILABLE_MODELS.append(
         {
             "id": "deepseek-chat",
-            "name": "DeepSeek Chat",
+            "name": "[DeepSeek] DeepSeek Chat",
             "prompt_price": 0.14,
             "completion_price": 0.28,
         }
@@ -147,7 +142,7 @@ async def startup():
     state.AVAILABLE_MODELS.append(
         {
             "id": "deepseek-reasoner",
-            "name": "DeepSeek Reasoner",
+            "name": "[DeepSeek] DeepSeek Reasoner",
             "prompt_price": 0.55,
             "completion_price": 2.19,
         }

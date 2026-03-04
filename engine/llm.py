@@ -12,8 +12,7 @@ from engine.config import (
     DEEPSEEK_API_KEY,
     GROQ_API_KEY,
     GROQ_BASE_URL,
-    CEREBRAS_API_KEY,
-    CEREBRAS_BASE_URL,
+    GEMINI_API_KEY,
 )
 from engine.database import (
     char_manager,
@@ -39,7 +38,14 @@ client = AsyncOpenAI(
 ds_client = AsyncOpenAI(base_url="https://api.deepseek.com", api_key=DEEPSEEK_API_KEY)
 
 groq_client = AsyncOpenAI(base_url=GROQ_BASE_URL, api_key=GROQ_API_KEY)
-cerebras_client = AsyncOpenAI(base_url=CEREBRAS_BASE_URL, api_key=CEREBRAS_API_KEY)
+
+gemini_client = None
+if GEMINI_API_KEY:
+    try:
+        from google import genai
+        gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        log.error(f"Failed to initialize Gemini client: {e}")
 
 
 async def stream_chat_response(
@@ -117,13 +123,63 @@ async def stream_chat_response(
 
     model_to_use = state.CURRENT_MODEL
     try:
+        if state.CURRENT_MODEL.startswith("gemini/"):
+            if not gemini_client:
+                await ws.send_text(build_ws_payload("system_update", "✗ Gemini API Key missing! Add gemini_api_key to config.yaml."))
+                return
+                
+            log.info(f"Using official Gemini client for {state.CURRENT_MODEL}")
+            model_to_use = state.CURRENT_MODEL.replace("gemini/", "")
+            
+            # Convert messages to Gemini format (role: user/model)
+            gemini_msgs = []
+            for m in messages:
+                role = "user" if m["role"] in ["user", "system"] else "model"
+                # If system prompt, we might want to use system_instruction in Client.models.generate_content
+                # But for simplicity, we'll just merge it or treat it as user for now as a quick integration
+                gemini_msgs.append({"role": role, "parts": [{"text": m["content"]}]})
+            
+            # Gemini SDK streaming is synchronous but can be wrapped or used with its own async patterns
+            # The new 'google-genai' SDK uses a slightly different pattern
+            
+            # Extract system instruction if present
+            system_instruction = None
+            if messages[0]["role"] == "system":
+                system_instruction = messages[0]["content"]
+                gemini_msgs = gemini_msgs[1:] # Remove system from history
+
+            start_time = time.time()
+            # The genai.Client.models.generate_content_stream is the way to go
+            # Note: SDK 0.1.0+ uses this pattern
+            for chunk in gemini_client.models.generate_content_stream(
+                model=model_to_use,
+                contents=gemini_msgs,
+                config={"system_instruction": system_instruction} if system_instruction else None
+            ):
+                if chunk.text:
+                    full_content += chunk.text
+                    total_tokens += 1 # Rough estimate for now
+                    
+                    elapsed = time.time() - start_time
+                    tps = total_tokens / elapsed if elapsed > 0 else 0
+                    
+                    await ws.send_text(build_ws_payload("chat_chunk", chunk.text, {
+                        "tps": round(tps, 2),
+                        "model": state.CURRENT_MODEL
+                    }))
+            
+            # Save final message to DB
+            msg_manager.add_message(Message(
+                role="assistant",
+                content=full_content,
+                character_id=char_id,
+                session_id=session_id
+            ))
+            return
+
         if state.CURRENT_MODEL.startswith("deepseek-"):
             active_client = ds_client
             log.info(f"Using DeepSeek official client for {state.CURRENT_MODEL}")
-        elif state.CURRENT_MODEL.startswith("cerebras/"):
-            active_client = cerebras_client
-            log.info(f"Using Cerebras client for {state.CURRENT_MODEL}")
-            model_to_use = state.CURRENT_MODEL.replace("cerebras/", "")
         elif (
             state.CURRENT_MODEL.startswith("groq/")
             or any(

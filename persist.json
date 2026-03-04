@@ -1,1 +1,1 @@
-{"world_id": "aethon", "character_id": "lily", "session_id": "2ad71d9e8040", "model": "deepseek/deepseek-v3.2", "model_confirmed": true, "rules": ["nsfw"]}
+{"world_id": "aethon", "character_id": "lily", "session_id": "62a6f66c539c", "model": "gemini/gemini-3.1-flash-lite-preview", "model_confirmed": true, "rules": ["nsfw"]}

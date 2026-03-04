@@ -9,10 +9,11 @@ try:
 except Exception as e:
     log.error(f"Failed to load config.yaml: {e}")
 
-MODEL_NAME = CONFIG.get("default_model", os.getenv("MODEL_NAME", "google/gemini-2.0-pro-exp-02-05:free"))
+MODEL_NAME = CONFIG.get("default_model", os.getenv("MODEL_NAME", "gemini/gemini-3-flash-preview"))
 
 SUPPORTED_MODELS = CONFIG.get("supported_models", [
-    "google/gemini-2.0-pro-exp-02-05:free",
+    "gemini/gemini-3.1-pro-preview",
+    "gemini/gemini-3-flash-preview",
     "openai/gpt-4o-mini",
     "anthropic/claude-3-haiku",
 ])
@@ -22,6 +23,4 @@ OPENAI_API_KEY = CONFIG.get("openai_api_key", os.getenv("OPENAI_API_KEY", "dummy
 DEEPSEEK_API_KEY = CONFIG.get("deepseek_api_key", os.getenv("DEEPSEEK_API_KEY", "dummy_deepseek_key"))
 GROQ_API_KEY = CONFIG.get("groq_api_key", os.getenv("GROQ_API_KEY", "dummy_groq_key"))
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-
-CEREBRAS_API_KEY = CONFIG.get("cerebras_api_key", os.getenv("CEREBRAS_API_KEY", "dummy_cerebras_key"))
-CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
+GEMINI_API_KEY = CONFIG.get("gemini_api_key", os.getenv("GEMINI_API_KEY", ""))
