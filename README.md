@@ -106,3 +106,12 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 *Created with ❤️ and **fully vibecoded** with the help of **gemini-cli** and **qoder-ide** for the roleplay community.*
+
+## ⚠️ Vibe Check & Experimental Status
+
+This project is an **experimental narrative engine** built for the love of roleplay and terminal UIs. 
+
+- **Vibecoded Architecture:** This entire system was conceptualized and orchestrated by a human "Director" and brought to life through heavy AI collaboration. It represents a "Human-in-the-loop" engineering philosophy.
+- **Experimental Code:** Speed and vibes were prioritized over traditional enterprise patterns. Expect messy internals and creative solutions.
+- **Security:** This is a local-first tool. It has **not** been audited by security professionals. Keep your API keys safe and avoid exposing the backend to the open web.
+- **Bugs:** If you find one, feel free to open an issue or a PR. This project is a playground, not a production-grade service.
