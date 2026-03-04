@@ -30,7 +30,7 @@ client = AsyncOpenAI(
     base_url=OPENAI_BASE_URL,
     api_key=OPENAI_API_KEY,
     default_headers={
-        "HTTP-Referer": "https://github.com/theflower",
+        "HTTP-Referer": "https://github.com/ritz541/tui-play",
         "X-Title": "The Flower Roleplay Engine",
     },
 )

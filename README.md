@@ -58,8 +58,8 @@ A high-performance, split-architecture narrative system designed for immersive, 
 We've provided a setup script to handle the virtual environment and initial asset creation:
 
 ```bash
-git clone https://github.com/yourusername/theflower.git
-cd theflower
+git clone https://github.com/ritz541/tui-play.git
+cd tui-play
 chmod +x setup.sh
 ./setup.sh
 ```
