@@ -105,4 +105,4 @@ This project is built to be extensible. Feel free to fork and add your own **Wor
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
-*Created with ❤️ and **fully vibecoded** for the roleplay community.*
+*Created with ❤️ and **fully vibecoded** with the help of **gemini-cli** and **qoder-ide** for the roleplay community.*

@@ -45,6 +45,10 @@ if [ ! -d "assets" ]; then
     cp -r assets_example assets
     echo " (Created assets/ from templates)"
 else
+    # Update system_rules if missing even if assets/ exists
+    if [ ! -f "assets/system_rules.yaml" ] && [ -f "assets_example/system_rules.yaml" ]; then
+        cp "assets_example/system_rules.yaml" "assets/system_rules.yaml"
+    fi
     echo " (assets/ already exists, skipping)"
 fi
 
