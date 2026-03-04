@@ -40,7 +40,8 @@ A high-performance, split-architecture narrative system designed for immersive, 
 ## 💻 System Requirements
 
 - **OS**: Linux, macOS, or Windows (via WSL2 recommended)
-- **Memory**: 4GB+ RAM (Embedding models run locally)
+- **Memory**: 4GB+ RAM (Embeddings run on CPU for maximum compatibility)
+- **Disk**: ~1GB (Setup is optimized to avoid heavy CUDA libraries)
 - **Software**: 
   - Python 3.12 or newer
   - Rust & Cargo (Latest stable)

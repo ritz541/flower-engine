@@ -32,7 +32,10 @@ python3 -m venv venv
 echo " Done."
 
 # 3. Install Dependencies
-echo -e "✦ Installing Python dependencies..."
+echo -e "✦ Installing Python dependencies (Optimized for CPU)..."
+# First, force install the CPU version of torch to avoid 8GB CUDA downloads
+venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu --quiet
+# Then, install the rest of the requirements
 venv/bin/pip install -r requirements.txt --quiet
 echo "  Dependencies installed."
 
