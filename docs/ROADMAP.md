@@ -2,7 +2,6 @@
 
 ## Phase 1: Mechanical Friction (The "Game" Layer)
 - [ ] **Dice Roll System**: Implement a backend function for success/failure checks (e.g., D20 logic).
-- [ ] **Skill-Based Modifiers**: Tie `/skills` to roll outcomes to determine difficulty.
 - [ ] **Narrative Complications**: Force the AI to narrate specific failure states when a roll is lost via `[SYSTEM]` injection.
 - [ ] **Manual Override**: Add a `/roll` command for player-initiated checks.
 

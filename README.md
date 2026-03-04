@@ -10,7 +10,6 @@ A high-performance, split-architecture narrative system designed for immersive, 
 
 - **Split Architecture**: Decoupled Python "Brain" (FastAPI/LLM) and Rust "Face" (Ratatui TUI) communicating via WebSockets.
 - **Hardcore System Rules**: Built-in logic for grounded reality, NPC autonomy, and consequence-driven storytelling.
-- **Dynamic Character Skills**: Acquire and track skills that physically alter the AI's narrative capabilities.
 - **Live Token Streaming**: Blazingly fast, real-time response rendering with typewriter animations.
 - **Session Management**: Full history persistence, session hot-swapping, and strict memory isolation.
 
@@ -79,7 +78,6 @@ chmod +x setup.sh
 - `assets/worlds/`: Core setting, geography, and doomsday clocks.
 - `assets/characters/`: Player personas and backgrounds.
 - `assets/rules/`: Global narrative constraints (e.g., "No Magic").
-- `assets/skills/`: Specific character abilities (e.g., "Hacking").
 
 ## 📜 System Rules
 

@@ -184,9 +184,7 @@ theflower/
 ├── assets/                # Game assets (gitignored)
 │   ├── worlds/
 │   ├── characters/
-│   ├── rules/
-│   ├── skills/
-│   └── modules/
+│   └── rules/
 ├── config.yaml            # Configuration
 ├── engine.db              # SQLite database
 └── persist.json           # State persistence
