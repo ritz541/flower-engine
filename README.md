@@ -39,12 +39,12 @@ A high-performance, split-architecture narrative system designed for immersive, 
 
 ## 💻 System Requirements
 
-- **OS**: Linux, macOS, or Windows (via WSL2 recommended)
+- **OS**: Linux (x64)
 - **Memory**: 4GB+ RAM (Embeddings run on CPU for maximum compatibility)
 - **Disk**: ~1GB (Setup is optimized to avoid heavy CUDA libraries)
 - **Software**: 
   - Python 3.12 or newer
-  - Rust & Cargo (Latest stable)
+  - **Rust & Cargo** (Optional: only needed if building from source)
   - `git` for cloning
 - **API Keys**: At least one from OpenRouter, Google Gemini, Groq, or DeepSeek.
 
@@ -52,7 +52,7 @@ A high-performance, split-architecture narrative system designed for immersive, 
 
 ### 1. Prerequisites
 - **Python 3.12+**
-- **Rust & Cargo** (for the TUI)
+- **Rust & Cargo** (Optional, `setup.sh` can download pre-compiled binaries)
 - **API Keys** (OpenRouter, DeepSeek, or Groq)
 
 ### 2. Automatic Setup

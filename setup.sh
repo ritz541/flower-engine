@@ -20,11 +20,21 @@ echo " Done."
 
 echo -ne "✦ Checking for Rust/Cargo..."
 if ! command -v cargo &> /dev/null; then
-    echo -e "
-  [ERROR] Cargo is not installed. Visit https://rustup.rs/ to install Rust."
-    exit 1
+    echo -e "\n  [!] Rust/Cargo not found."
+    read -p "  Would you like to download the pre-compiled TUI binary instead? (y/n): " choice
+    if [ "$choice" = "y" ] || [ "$choice" = "Y" ]; then
+        echo -e "  ✦ Downloading flower-tui-linux-x64..."
+        mkdir -p tui/target/release
+        curl -L "https://github.com/ritz541/flower-engine/releases/download/v1.0.0/flower-tui-linux-x64" -o tui/target/release/tui
+        chmod +x tui/target/release/tui
+        echo "  Done (Binary installed)."
+    else
+        echo -e "  [ERROR] Rust is required to build from source. Visit https://rustup.rs/ to install."
+        exit 1
+    fi
+else
+    echo " Done."
 fi
-echo " Done."
 
 # 2. Create Virtual Environment
 echo -ne "✦ Creating virtual environment (venv)..."
